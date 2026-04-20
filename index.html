@@ -6,268 +6,89 @@
   <title>Gesalia — Autorizaciones</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #ffffff;
-      --bg2: #f5f5f3;
-      --bg3: #eeecea;
-      --text: #1a1a18;
-      --text2: #6b6a65;
-      --text3: #9c9a92;
-      --border: rgba(0,0,0,0.10);
-      --border2: rgba(0,0,0,0.18);
-      --teal: #0f6e56;
-      --teal-bg: #e1f5ee;
-      --teal-text: #085041;
-      --amber: #854f0b;
-      --amber-bg: #faeeda;
-      --amber-text: #633806;
-      --blue: #185fa5;
-      --blue-bg: #e6f1fb;
-      --blue-text: #0c447c;
-      --green-bg: #eaf3de;
-      --green-text: #3b6d11;
-      --warn-bg: #faeeda;
-      --warn-text: #854f0b;
-      --radius: 10px;
-      --radius-sm: 7px;
+      --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeecea;
+      --text: #1a1a18; --text2: #6b6a65; --text3: #9c9a92;
+      --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+      --blue-bg: #e6f1fb; --blue-text: #0c447c;
+      --green-bg: #eaf3de; --green-text: #3b6d11;
+      --amber-bg: #faeeda; --amber-text: #633806;
+      --warn-bg: #faeeda; --warn-text: #854f0b;
+      --err-bg: #fcebeb; --err-text: #a32d2d;
+      --radius: 10px; --radius-sm: 7px;
     }
-
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #1c1c1a;
-        --bg2: #252522;
-        --bg3: #2e2e2b;
-        --text: #e8e6de;
-        --text2: #a8a69e;
-        --text3: #6e6c65;
-        --border: rgba(255,255,255,0.08);
-        --border2: rgba(255,255,255,0.15);
-        --teal-bg: #085041;
-        --teal-text: #9fe1cb;
-        --amber-bg: #633806;
-        --amber-text: #fac775;
-        --blue-bg: #0c447c;
-        --blue-text: #b5d4f4;
-        --green-bg: #27500a;
-        --green-text: #c0dd97;
-        --warn-bg: #633806;
-        --warn-text: #fac775;
+        --bg: #1c1c1a; --bg2: #252522; --bg3: #2e2e2b;
+        --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
+        --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+        --blue-bg: #0c447c; --blue-text: #b5d4f4;
+        --green-bg: #27500a; --green-text: #c0dd97;
+        --amber-bg: #633806; --amber-text: #fac775;
+        --warn-bg: #633806; --warn-text: #fac775;
+        --err-bg: #501313; --err-text: #f09595;
       }
     }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg3);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 0;
-    }
-
-    .topbar {
-      background: var(--bg);
-      border-bottom: 0.5px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+    .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 10; }
     .logo { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
     .logo span { font-weight: 400; color: var(--text3); font-size: 13px; margin-left: 6px; }
-
-    .tab-bar {
-      display: flex;
-      background: var(--bg3);
-      border-bottom: 0.5px solid var(--border);
-    }
-    .tab {
-      flex: 1;
-      padding: 11px 8px;
-      font-size: 13px;
-      text-align: center;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      color: var(--text3);
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-    }
+    .tab-bar { display: flex; background: var(--bg3); border-bottom: 0.5px solid var(--border); }
+    .tab { flex: 1; padding: 11px 8px; font-size: 13px; text-align: center; cursor: pointer; border: none; background: transparent; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.15s; }
     .tab.active { color: var(--text); border-bottom-color: var(--text); background: var(--bg); }
-
     .view { display: none; padding: 20px 16px; max-width: 480px; margin: 0 auto; }
     .view.active { display: block; }
-
-    .card {
-      background: var(--bg);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-      margin-bottom: 12px;
-    }
-
-    .badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 20px;
-      margin-bottom: 12px;
-    }
+    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; }
     .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
     .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
-
     .field { margin-bottom: 14px; }
     .field:last-child { margin-bottom: 0; }
     .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
-    .field input {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 16px;
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius-sm);
-      background: var(--bg);
-      color: var(--text);
-      outline: none;
-      -webkit-appearance: none;
-    }
+    .field input { width: 100%; padding: 10px 12px; font-size: 16px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; }
     .field input:focus { border-color: var(--text2); }
-
     .pills { display: flex; flex-wrap: wrap; gap: 7px; }
-    .pill {
-      padding: 7px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      cursor: pointer;
-      border: 0.5px solid var(--border2);
-      background: var(--bg2);
-      color: var(--text2);
-      transition: all 0.12s;
-      user-select: none;
-    }
+    .pill { padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text2); transition: all 0.12s; user-select: none; }
     .pill.selected { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
-
-    .btn {
-      width: 100%;
-      padding: 13px;
-      font-size: 15px;
-      font-weight: 500;
-      border: none;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      margin-top: 6px;
-      transition: opacity 0.15s;
-    }
+    .btn { width: 100%; padding: 13px; font-size: 15px; font-weight: 500; border: none; border-radius: var(--radius-sm); cursor: pointer; margin-top: 6px; transition: opacity 0.15s; }
     .btn:hover { opacity: 0.85; }
     .btn-primary { background: var(--text); color: var(--bg); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text2);
-      border: 0.5px solid var(--border2);
-      margin-top: 8px;
-    }
-
-    .alert {
-      padding: 11px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      line-height: 1.5;
-      margin-bottom: 12px;
-    }
+    .btn-ghost { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); margin-top: 8px; }
+    .alert { padding: 11px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
     .alert-green { background: var(--green-bg); color: var(--green-text); }
-    .alert-warn  { background: var(--warn-bg);  color: var(--warn-text);  }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 7px 0;
-      font-size: 13px;
-      border-bottom: 0.5px solid var(--border);
-    }
+    .alert-warn  { background: var(--warn-bg);  color: var(--warn-text); }
+    .alert-err   { background: var(--err-bg);   color: var(--err-text); }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; border-bottom: 0.5px solid var(--border); }
     .info-row:last-child { border-bottom: none; }
     .info-row .lbl { color: var(--text2); }
     .info-row .val { font-weight: 500; }
-
     .dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-    .dot {
-      width: 22px; height: 22px;
-      border-radius: 50%;
-      background: var(--bg3);
-      border: 0.5px solid var(--border2);
-    }
-    .dot.done { background: var(--green-bg); border-color: transparent; }
-    .dot.today { background: var(--blue-bg); border-color: transparent; }
-
-    .success-screen {
-      text-align: center;
-      padding: 2.5rem 1rem;
-    }
-    .success-icon {
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: var(--green-bg);
-      color: var(--green-text);
-      font-size: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 14px;
-    }
+    .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--bg3); border: 0.5px solid var(--border2); }
+    .dot.done  { background: var(--green-bg); border-color: transparent; }
+    .dot.today { background: var(--blue-bg);  border-color: transparent; }
+    .success-screen { text-align: center; padding: 2.5rem 1rem; }
+    .success-icon { width: 52px; height: 52px; border-radius: 50%; background: var(--green-bg); color: var(--green-text); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
     .success-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
     .success-sub { font-size: 13px; color: var(--text2); }
-
-    /* Daily view */
-    .day-header {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 10px;
-    }
-    .daily-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 11px 0;
-      border-bottom: 0.5px solid var(--border);
-    }
+    .lock-center { text-align: center; padding: 1.5rem 0 1rem; }
+    .lock-icon { font-size: 28px; margin-bottom: 10px; }
+    .lock-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .lock-sub { font-size: 13px; color: var(--text2); margin-bottom: 18px; }
+    .day-header { font-size: 12px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    .daily-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
     .daily-item:last-child { border-bottom: none; }
     .di-main { flex: 1; }
     .di-name { font-size: 14px; font-weight: 500; }
-    .di-meta { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.5; }
+    .di-meta { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.6; }
     .di-right { text-align: right; flex-shrink: 0; }
-    .os-tag {
-      font-size: 11px;
-      padding: 3px 9px;
-      border-radius: 10px;
-      display: inline-block;
-    }
-    .tag-sancor  { background: var(--blue-bg);  color: var(--blue-text);  }
-    .tag-prev    { background: var(--green-bg);  color: var(--green-text); }
-    .tag-mutual  { background: var(--amber-bg);  color: var(--amber-text); }
+    .os-tag { font-size: 11px; padding: 3px 9px; border-radius: 10px; display: inline-block; }
+    .tag-sancor { background: var(--blue-bg);  color: var(--blue-text); }
+    .tag-prev   { background: var(--green-bg); color: var(--green-text); }
+    .tag-mutual { background: var(--amber-bg); color: var(--amber-text); }
     .pending-auth { font-size: 11px; color: var(--warn-text); margin-top: 4px; }
-
-    .empty-state {
-      text-align: center;
-      padding: 2.5rem 1rem;
-      color: var(--text3);
-      font-size: 13px;
-    }
-
+    .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text3); font-size: 13px; }
     .divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
-
-    .info-box {
-      background: var(--bg2);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      font-size: 12px;
-      color: var(--text2);
-      line-height: 1.5;
-    }
+    .info-box { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 12px; color: var(--text2); line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -278,7 +99,7 @@
 
 <div class="tab-bar">
   <button class="tab active" onclick="showView('patient')">Soy paciente</button>
-  <button class="tab" onclick="showView('daily')">Planilla del día</button>
+  <button class="tab" onclick="showView('daily')">Acceso profesional</button>
 </div>
 
 <!-- VISTA PACIENTE -->
@@ -315,7 +136,6 @@
 
   <div id="step-new" style="display:none;">
     <div class="alert alert-warn">Primera sesión de esta tanda — completá tus datos una sola vez.</div>
-
     <div class="card">
       <div class="badge badge-blue">Datos personales</div>
       <div class="field">
@@ -336,7 +156,6 @@
         <input type="text" id="new-afiliado" placeholder="00-00000000/00" inputmode="numeric" />
       </div>
     </div>
-
     <div class="card" id="mutual-fields" style="display:none;">
       <div class="badge badge-warn">Datos del médico prescriptor</div>
       <div class="field">
@@ -352,7 +171,6 @@
         <input type="text" id="new-diagnostico" placeholder="CIE-10 o descripción" />
       </div>
     </div>
-
     <div class="card">
       <div class="badge badge-blue">Token de hoy</div>
       <div class="field">
@@ -375,54 +193,94 @@
 
 </div>
 
-<!-- VISTA PLANILLA -->
+<!-- VISTA PROFESIONAL -->
 <div id="view-daily" class="view">
-  <div class="card">
-    <div class="day-header">Tokens del día — <span id="today-date"></span></div>
-    <div id="daily-list">
-      <div class="empty-state">Aún no hay registros hoy</div>
+
+  <div id="lock-screen">
+    <div class="card">
+      <div class="lock-center">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">Acceso profesional</div>
+        <div class="lock-sub">Ingresá tu clave para ver la planilla del día</div>
+      </div>
+      <div id="lock-error" class="alert alert-err" style="display:none;">Clave incorrecta. Intentá de nuevo.</div>
+      <div class="field">
+        <label>Clave de acceso</label>
+        <input type="password" id="pass-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPass()" />
+      </div>
+      <button class="btn btn-primary" onclick="checkPass()">Ingresar</button>
     </div>
   </div>
-  <div class="info-box">
-    Los registros de Mutual Médica incluyen todos los datos para la autorización. Al final del día cargalos en Octus.
+
+  <div id="daily-screen" style="display:none;">
+    <div class="card">
+      <div class="day-header">Tokens del día — <span id="today-date"></span></div>
+      <div id="daily-list"><div class="empty-state">Aún no hay registros hoy</div></div>
+    </div>
+    <div class="info-box">
+      Cada token se guarda automáticamente en tu Google Sheet. Al final del día cargá los de Mutual Médica en Octus con el número de autorización.
+    </div>
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="lockScreen()">Cerrar sesión</button>
   </div>
+
 </div>
 
 <script>
-  const P_KEY  = 'gesalia_patients_v1';
-  const S_KEY  = 'gesalia_sessions_v1';
-  const T_KEY  = 'gesalia_today_v1';
+  const SHEET_URL  = 'https://script.google.com/macros/s/AKfycbz_rUPwMnsHn6IcNvHYqRMu11m1rijxr_iRDrnsXg2-rCiGrZ8XJyGL9vxFhJOWgpWT/exec';
+  const ACCESS_PASS = 'kine5393';
+  const P_KEY = 'gesalia_patients_v1';
+  const S_KEY = 'gesalia_sessions_v1';
+  const T_KEY = 'gesalia_today_v1';
 
-  const get = k => { try { return JSON.parse(localStorage.getItem(k) || (k === T_KEY ? '[]' : '{}')); } catch(e) { return k === T_KEY ? [] : {}; } };
-  const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
-
+  const getStore = k => { try { return JSON.parse(localStorage.getItem(k) || (k === T_KEY ? '[]' : '{}')); } catch(e) { return k === T_KEY ? [] : {}; } };
+  const setStore = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
   const todayStr = () => new Date().toISOString().split('T')[0];
 
   function bizDaysDiff(from, to) {
     let count = 0, d = new Date(from), end = new Date(to);
-    while (d <= end) { const w = d.getDay(); if (w && w < 6) count++; d.setDate(d.getDate()+1); }
+    while (d <= end) { const w = d.getDay(); if (w && w < 6) count++; d.setDate(d.getDate() + 1); }
     return count;
   }
 
   let currentDni = '';
+  let isUnlocked = false;
 
   function showView(v) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&v==='patient')||(i===1&&v==='daily')));
-    document.getElementById('view-'+v).classList.add('active');
-    if (v === 'daily') renderDaily();
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i===0&&v==='patient')||(i===1&&v==='daily')));
+    document.getElementById('view-' + v).classList.add('active');
+    if (v === 'daily') {
+      if (isUnlocked) { show('daily-screen'); hide('lock-screen'); renderDaily(); }
+      else { show('lock-screen'); hide('daily-screen'); setTimeout(() => document.getElementById('pass-input').focus(), 100); }
+    }
   }
+
+  function checkPass() {
+    const val = document.getElementById('pass-input').value;
+    if (val === ACCESS_PASS) {
+      isUnlocked = true;
+      document.getElementById('pass-input').value = '';
+      hide('lock-error'); hide('lock-screen'); show('daily-screen');
+      renderDaily();
+    } else {
+      show('lock-error');
+      document.getElementById('pass-input').value = '';
+      document.getElementById('pass-input').focus();
+    }
+  }
+
+  function lockScreen() { isUnlocked = false; hide('daily-screen'); show('lock-screen'); }
 
   function checkDni() {
     const dni = document.getElementById('dni-input').value.trim();
     if (!dni || dni.length < 7) { alert('Ingresá un DNI válido.'); return; }
     currentDni = dni;
-    const patients = get(P_KEY), sessions = get(S_KEY);
+    const patients = getStore(P_KEY), sessions = getStore(S_KEY);
     if (patients[dni]) {
       const sess = sessions[dni] || { count: 0, firstDate: todayStr() };
       if (bizDaysDiff(sess.firstDate, todayStr()) >= 10 || sess.count >= 10) {
-        delete patients[dni]; set(P_KEY, patients);
-        delete sessions[dni]; set(S_KEY, sessions);
+        delete patients[dni]; setStore(P_KEY, patients);
+        delete sessions[dni]; setStore(S_KEY, sessions);
         showNewForm(); return;
       }
       const p = patients[dni];
@@ -456,53 +314,76 @@
   function submitToken() {
     const token = document.getElementById('ret-token').value.trim();
     if (!token) { alert('Ingresá el token.'); return; }
-    const patients = get(P_KEY), sessions = get(S_KEY);
+    const patients = getStore(P_KEY), sessions = getStore(S_KEY);
     const p = patients[currentDni];
     const sess = sessions[currentDni] || { count: 0, firstDate: todayStr() };
     sess.count++;
     sessions[currentDni] = sess;
-    set(S_KEY, sessions);
-    addToday({ name: p.name, os: p.os, token, afiliado: p.afiliado, session: sess.count, mutual: p.mutual || null });
+    setStore(S_KEY, sessions);
+    const entry = { name: p.name, os: p.os, token, afiliado: p.afiliado, session: sess.count, mutual: p.mutual || null };
+    addToday(entry);
+    sendToSheet(entry, currentDni);
     hide('step-returning'); show('step-done');
   }
 
   function submitNew() {
-    const name = document.getElementById('new-name').value.trim();
-    const os   = document.getElementById('new-os').value;
+    const name     = document.getElementById('new-name').value.trim();
+    const os       = document.getElementById('new-os').value;
     const afiliado = document.getElementById('new-afiliado').value.trim();
     const token    = document.getElementById('new-token').value.trim();
     if (!name || !os || !afiliado || !token) { alert('Completá todos los campos obligatorios.'); return; }
     let mutual = null;
     if (os === 'Mutual Médica') {
-      const medico     = document.getElementById('new-medico').value.trim();
-      const matricula  = document.getElementById('new-matricula').value.trim();
-      const diagnostico= document.getElementById('new-diagnostico').value.trim();
+      const medico      = document.getElementById('new-medico').value.trim();
+      const matricula   = document.getElementById('new-matricula').value.trim();
+      const diagnostico = document.getElementById('new-diagnostico').value.trim();
       if (!medico || !matricula || !diagnostico) { alert('Completá los datos del médico prescriptor.'); return; }
       mutual = { medico, matricula, provincia: 'Córdoba', diagnostico, practica: '250101' };
     }
-    const patients = get(P_KEY);
+    const patients = getStore(P_KEY);
     patients[currentDni] = { name, os, afiliado, mutual };
-    set(P_KEY, patients);
-    const sessions = get(S_KEY);
+    setStore(P_KEY, patients);
+    const sessions = getStore(S_KEY);
     sessions[currentDni] = { count: 1, firstDate: todayStr() };
-    set(S_KEY, sessions);
-    addToday({ name, os, token, afiliado, session: 1, mutual });
+    setStore(S_KEY, sessions);
+    const entry = { name, os, token, afiliado, session: 1, mutual };
+    addToday(entry);
+    sendToSheet(entry, currentDni);
     hide('step-new'); show('step-done');
   }
 
   function addToday(entry) {
-    const list = get(T_KEY);
-    list.push({ ...entry, time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) });
-    set(T_KEY, list);
+    const list = getStore(T_KEY);
+    const now = new Date();
+    list.push({ ...entry, time: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), date: todayStr() });
+    setStore(T_KEY, list);
+  }
+
+  function sendToSheet(entry, dni) {
+    const now = new Date();
+    const payload = {
+      fecha: now.toLocaleDateString('es-AR'),
+      hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+      nombre: entry.name, dni,
+      obraSocial: entry.os, afiliado: entry.afiliado,
+      token: entry.token, sesion: entry.session,
+      medico: entry.mutual?.medico || '',
+      matricula: entry.mutual?.matricula || '',
+      diagnostico: entry.mutual?.diagnostico || '',
+      practica: entry.mutual?.practica || '',
+      provincia: entry.mutual?.provincia || ''
+    };
+    fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
   }
 
   function renderDaily() {
-    const list = get(T_KEY);
+    const list = getStore(T_KEY);
     const container = document.getElementById('daily-list');
     document.getElementById('today-date').textContent = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
-    if (!list.length) { container.innerHTML = '<div class="empty-state">Aún no hay registros hoy</div>'; return; }
+    const todayList = list.filter(e => e.date === todayStr());
+    if (!todayList.length) { container.innerHTML = '<div class="empty-state">Aún no hay registros hoy</div>'; return; }
     const tagClass = { 'Sancor': 'tag-sancor', 'Prevención Salud': 'tag-prev', 'Mutual Médica': 'tag-mutual' };
-    container.innerHTML = list.map(e => `
+    container.innerHTML = todayList.map(e => `
       <div class="daily-item">
         <div class="di-main">
           <div class="di-name">${e.name}</div>
@@ -515,19 +396,17 @@
           <span class="os-tag ${tagClass[e.os] || ''}">${e.os}</span>
           ${e.mutual ? `<div class="pending-auth">Pendiente auth</div>` : ''}
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
   }
 
   function resetView() {
     currentDni = '';
     document.getElementById('dni-input').value = '';
-    hide('step-returning'); hide('step-new'); hide('step-done');
-    show('step-dni');
+    hide('step-returning'); hide('step-new'); hide('step-done'); show('step-dni');
   }
 
-  function show(id) { document.getElementById(id).style.display = ''; }
-  function hide(id) { document.getElementById(id).style.display = 'none'; }
+  function show(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+  function hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
 </script>
 </body>
 </html>
