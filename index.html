@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gesalia — Autorizaciones</title>
+  <title>Gesalia — Autorizaciones y Agenda</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -33,47 +33,66 @@
     .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 10; }
     .logo { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
     .logo span { font-weight: 400; color: var(--text3); font-size: 13px; margin-left: 6px; }
+
     .tab-bar { display: flex; background: var(--bg3); border-bottom: 0.5px solid var(--border); }
     .tab { flex: 1; padding: 11px 8px; font-size: 13px; text-align: center; cursor: pointer; border: none; background: transparent; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.15s; }
     .tab.active { color: var(--text); border-bottom-color: var(--text); background: var(--bg); }
+
+    .subtab-bar { display: flex; gap: 6px; padding: 12px 16px 0; max-width: 480px; margin: 0 auto; }
+    .subtab { flex: 1; padding: 8px 6px; font-size: 12px; text-align: center; cursor: pointer; border: 0.5px solid var(--border2); border-radius: 8px; background: var(--bg); color: var(--text2); }
+    .subtab.active { background: var(--text); color: var(--bg); border-color: transparent; }
+
     .view { display: none; padding: 20px 16px; max-width: 480px; margin: 0 auto; }
     .view.active { display: block; }
+    .subview { display: none; }
+    .subview.active { display: block; }
+
     .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
     .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; }
     .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
     .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+
     .field { margin-bottom: 14px; }
     .field:last-child { margin-bottom: 0; }
     .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
     .field input { width: 100%; padding: 10px 12px; font-size: 16px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; }
     .field input:focus { border-color: var(--text2); }
+    .hint { font-size: 11px; color: var(--text3); margin-top: 5px; line-height: 1.4; }
+
     .pills { display: flex; flex-wrap: wrap; gap: 7px; }
     .pill { padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text2); transition: all 0.12s; user-select: none; }
     .pill.selected { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
+
     .btn { width: 100%; padding: 13px; font-size: 15px; font-weight: 500; border: none; border-radius: var(--radius-sm); cursor: pointer; margin-top: 6px; transition: opacity 0.15s; }
     .btn:hover { opacity: 0.85; }
     .btn-primary { background: var(--text); color: var(--bg); }
     .btn-ghost { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); margin-top: 8px; }
+
     .alert { padding: 11px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
     .alert-green { background: var(--green-bg); color: var(--green-text); }
     .alert-warn  { background: var(--warn-bg);  color: var(--warn-text); }
     .alert-err   { background: var(--err-bg);   color: var(--err-text); }
+
     .info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; border-bottom: 0.5px solid var(--border); }
     .info-row:last-child { border-bottom: none; }
     .info-row .lbl { color: var(--text2); }
     .info-row .val { font-weight: 500; }
+
     .dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
     .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--bg3); border: 0.5px solid var(--border2); }
     .dot.done  { background: var(--green-bg); border-color: transparent; }
     .dot.today { background: var(--blue-bg);  border-color: transparent; }
-    .success-screen { text-align: center; padding: 2.5rem 1rem; }
-    .success-icon { width: 52px; height: 52px; border-radius: 50%; background: var(--green-bg); color: var(--green-text); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+
+    .success-screen { text-align: center; padding: 2rem 1rem; }
+    .success-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--green-bg); color: var(--green-text); font-size: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
     .success-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
     .success-sub { font-size: 13px; color: var(--text2); }
+
     .lock-center { text-align: center; padding: 1.5rem 0 1rem; }
     .lock-icon { font-size: 28px; margin-bottom: 10px; }
     .lock-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
     .lock-sub { font-size: 13px; color: var(--text2); margin-bottom: 18px; }
+
     .day-header { font-size: 12px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
     .daily-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
     .daily-item:last-child { border-bottom: none; }
@@ -86,23 +105,56 @@
     .tag-prev   { background: var(--green-bg); color: var(--green-text); }
     .tag-mutual { background: var(--amber-bg); color: var(--amber-text); }
     .pending-auth { font-size: 11px; color: var(--warn-text); margin-top: 4px; }
+
     .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text3); font-size: 13px; }
     .divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
     .info-box { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+    /* Agenda module */
+    .day-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+    .day-row:last-child { border-bottom: none; }
+    .day-check { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 13px; color: transparent; }
+    .day-check.checked { background: var(--green-bg); border-color: transparent; color: var(--green-text); }
+    .day-label { font-size: 13px; flex: 1; }
+    .day-num { font-size: 11px; color: var(--text3); }
+
+    .day-group { margin-bottom: 16px; }
+    .day-group-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .patient-card { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 0.5px solid var(--border); border-left: 4px solid var(--pcolor, var(--blue-text)); border-radius: 9px; padding: 11px 13px; margin-bottom: 7px; }
+    .patient-time { font-size: 13px; font-weight: 600; color: var(--blue-text); background: var(--blue-bg); padding: 4px 9px; border-radius: 6px; min-width: 48px; text-align: center; flex-shrink: 0; }
+    .patient-info { flex: 1; min-width: 0; }
+    .patient-name { font-size: 13.5px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .patient-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pcolor, var(--blue-text)); flex-shrink: 0; }
+    .patient-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .session-pill { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--bg2); color: var(--text2); flex-shrink: 0; }
+    .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .icon-btn { width: 26px; height: 26px; border-radius: 6px; border: none; background: var(--bg2); color: var(--text2); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .icon-btn:active { opacity: 0.7; }
+
+    /* Edit modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50; align-items: flex-end; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-sheet { background: var(--bg); width: 100%; max-width: 480px; border-radius: 14px 14px 0 0; padding: 18px 16px 28px; }
+    .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+    .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+    .modal-btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; text-align: center; }
+    .modal-btn-danger { background: var(--err-bg); color: var(--err-text); }
+    .modal-btn-danger-all { background: var(--err-text); color: #fff; }
+    .modal-btn-cancel { background: var(--bg2); color: var(--text2); }
   </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="logo">Gesalia <span>autorizaciones</span></div>
+  <div class="logo">Gesalia <span>autorizaciones y agenda</span></div>
 </div>
 
 <div class="tab-bar">
   <button class="tab active" onclick="showView('patient')">Soy paciente</button>
-  <button class="tab" onclick="showView('daily')">Acceso profesional</button>
+  <button class="tab" onclick="showView('pro')">Acceso profesional</button>
 </div>
 
-<!-- VISTA PACIENTE -->
+<!-- ============ VISTA PACIENTE ============ -->
 <div id="view-patient" class="view active">
 
   <div id="step-dni">
@@ -143,6 +195,10 @@
         <input type="text" id="new-name" placeholder="Juan Pérez" autocomplete="name" />
       </div>
       <div class="field">
+        <label>Teléfono</label>
+        <input type="tel" id="new-phone" placeholder="351 1234567" inputmode="tel" autocomplete="tel" />
+      </div>
+      <div class="field">
         <label>Obra social</label>
         <div class="pills">
           <span class="pill" onclick="selectOs(this,'Sancor')">Sancor</span>
@@ -151,7 +207,7 @@
         </div>
         <input type="hidden" id="new-os" />
       </div>
-      <div class="field">
+      <div class="field" id="afiliado-field" style="display:none;">
         <label>Nº de afiliado</label>
         <input type="text" id="new-afiliado" placeholder="00-00000000/00" inputmode="numeric" />
       </div>
@@ -193,46 +249,154 @@
 
 </div>
 
-<!-- VISTA PROFESIONAL -->
-<div id="view-daily" class="view">
+<!-- ============ VISTA PROFESIONAL ============ -->
+<div id="view-pro" class="view">
 
   <div id="lock-screen">
-    <div class="card">
-      <div class="lock-center">
-        <div class="lock-icon">🔒</div>
-        <div class="lock-title">Acceso profesional</div>
-        <div class="lock-sub">Ingresá tu clave para ver la planilla del día</div>
+    <div style="max-width:480px; margin:0 auto; padding: 20px 16px;">
+      <div class="card">
+        <div class="lock-center">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-title">Acceso profesional</div>
+          <div class="lock-sub">Ingresá tu clave para entrar al panel</div>
+        </div>
+        <div id="lock-error" class="alert alert-err" style="display:none;">Clave incorrecta. Intentá de nuevo.</div>
+        <div class="field">
+          <label>Clave de acceso</label>
+          <input type="password" id="pass-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPass()" />
+        </div>
+        <button class="btn btn-primary" onclick="checkPass()">Ingresar</button>
       </div>
-      <div id="lock-error" class="alert alert-err" style="display:none;">Clave incorrecta. Intentá de nuevo.</div>
-      <div class="field">
-        <label>Clave de acceso</label>
-        <input type="password" id="pass-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPass()" />
-      </div>
-      <button class="btn btn-primary" onclick="checkPass()">Ingresar</button>
     </div>
   </div>
 
-  <div id="daily-screen" style="display:none;">
-    <div class="card">
-      <div class="day-header">Tokens del día — <span id="today-date"></span></div>
-      <div id="daily-list"><div class="empty-state">Aún no hay registros hoy</div></div>
+  <div id="pro-panel" style="display:none;">
+
+    <div class="subtab-bar">
+      <button class="subtab active" onclick="showSubtab('tokens')">Tokens del día</button>
+      <button class="subtab" onclick="showSubtab('new-patient')">Ingresar paciente</button>
+      <button class="subtab" onclick="showSubtab('agenda')">Agenda</button>
     </div>
-    <div class="info-box">
-      Cada token se guarda automáticamente en tu Google Sheet. Al final del día cargá los de Mutual Médica en Octus con el número de autorización.
+
+    <!-- SUBVIEW: TOKENS DEL DÍA -->
+    <div id="sub-tokens" class="view subview active">
+      <div class="card">
+        <div class="day-header">Tokens del día — <span id="today-date"></span></div>
+        <div id="daily-list"><div class="empty-state">Aún no hay registros hoy</div></div>
+      </div>
+      <div class="info-box">
+        Cada token se guarda automáticamente. Al final del día cargá los de Mutual Médica en Octus con el número de autorización.
+      </div>
     </div>
-    <button class="btn btn-ghost" style="margin-top:12px;" onclick="lockScreen()">Cerrar sesión</button>
+
+    <!-- SUBVIEW: INGRESAR PACIENTE -->
+    <div id="sub-new-patient" class="view subview">
+      <div id="ag-step-form">
+        <div class="card">
+          <div class="badge badge-blue">Nuevo paciente en agenda</div>
+          <div class="field">
+            <label>Nombre del paciente</label>
+            <input type="text" id="ag-name" placeholder="Juan Pérez" />
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="tel" id="ag-phone" placeholder="Pegá el número copiado de WhatsApp" />
+            <div class="hint">Abrí el chat del paciente en WhatsApp, copiá el número y pegalo acá. El formato se ajusta solo.</div>
+          </div>
+          <div class="field">
+            <label>Día y hora de inicio</label>
+            <input type="datetime-local" id="ag-datetime" />
+          </div>
+          <div class="field">
+            <label>Cantidad de sesiones</label>
+            <input type="number" id="ag-sessions" placeholder="10" min="1" />
+            <div class="hint">Generalmente 5 o 10, pero podés poner cualquier número.</div>
+          </div>
+          <button class="btn btn-primary" onclick="generatePreview()">Calcular días →</button>
+        </div>
+      </div>
+
+      <div id="ag-step-preview" style="display:none;">
+        <div class="card">
+          <div class="day-header">Confirmá los días — destildá si alguno no corresponde</div>
+          <div id="preview-days"></div>
+        </div>
+        <button class="btn btn-primary" onclick="confirmSchedule()">Confirmar y programar mensajes</button>
+        <button class="btn btn-ghost" onclick="backToForm()">← Volver</button>
+      </div>
+
+      <div id="ag-step-success" style="display:none;">
+        <div class="card">
+          <div class="success-screen">
+            <div class="success-icon">✓</div>
+            <div class="success-title">Paciente agendado</div>
+            <div class="success-sub" id="ag-success-detail"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="resetAgendaForm()">Agendar otro paciente</button>
+      </div>
+    </div>
+
+    <!-- SUBVIEW: AGENDA -->
+    <div id="sub-agenda" class="view subview">
+      <div id="agenda-content"></div>
+    </div>
+
+    <div style="max-width:480px; margin:16px auto 0; padding: 0 16px;">
+      <button class="btn btn-ghost" onclick="lockScreen()">Cerrar sesión</button>
+    </div>
+
   </div>
 
 </div>
 
+<!-- EDIT/DELETE MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="modal-patient-title">Paciente</div>
+
+    <div id="modal-edit-fields">
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="edit-name" />
+      </div>
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="tel" id="edit-phone" />
+      </div>
+      <div class="field">
+        <label>Hora de este turno</label>
+        <input type="time" id="edit-time" />
+      </div>
+    </div>
+
+    <div id="modal-confirm-fields" style="display:none;">
+      <div class="alert alert-warn" id="modal-confirm-text"></div>
+    </div>
+
+    <div class="modal-actions" id="modal-actions-default">
+      <button class="modal-btn btn-primary" onclick="saveEdit()">Guardar cambios</button>
+      <button class="modal-btn modal-btn-danger" onclick="askDeleteOne()">Eliminar solo este día</button>
+      <button class="modal-btn modal-btn-danger-all" onclick="askDeleteAll()">Eliminar todas las sesiones de este paciente</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancelar</button>
+    </div>
+
+    <div class="modal-actions" id="modal-actions-confirm" style="display:none;">
+      <button class="modal-btn modal-btn-danger-all" id="modal-confirm-btn" onclick="">Sí, eliminar</button>
+      <button class="modal-btn modal-btn-cancel" onclick="cancelDeleteConfirm()">No, volver</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  const SHEET_URL  = 'https://script.google.com/macros/s/AKfycbz_rUPwMnsHn6IcNvHYqRMu11m1rijxr_iRDrnsXg2-rCiGrZ8XJyGL9vxFhJOWgpWT/exec';
+  const SHEET_URL   = 'https://script.google.com/macros/s/AKfycbz_rUPwMnsHn6IcNvHYqRMu11m1rijxr_iRDrnsXg2-rCiGrZ8XJyGL9vxFhJOWgpWT/exec';
   const ACCESS_PASS = 'kine5393';
   const P_KEY = 'gesalia_patients_v1';
   const S_KEY = 'gesalia_sessions_v1';
   const T_KEY = 'gesalia_today_v1';
+  const A_KEY = 'gesalia_agenda_v1';
 
-  const getStore = k => { try { return JSON.parse(localStorage.getItem(k) || (k === T_KEY ? '[]' : '{}')); } catch(e) { return k === T_KEY ? [] : {}; } };
+  const getStore = (k, fallback) => { try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(fallback)); } catch(e) { return fallback; } };
   const setStore = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
   const todayStr = () => new Date().toISOString().split('T')[0];
 
@@ -245,13 +409,14 @@
   let currentDni = '';
   let isUnlocked = false;
 
+  /* ---------- TOP-LEVEL TABS ---------- */
   function showView(v) {
-    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i===0&&v==='patient')||(i===1&&v==='daily')));
-    document.getElementById('view-' + v).classList.add('active');
-    if (v === 'daily') {
-      if (isUnlocked) { show('daily-screen'); hide('lock-screen'); renderDaily(); }
-      else { show('lock-screen'); hide('daily-screen'); setTimeout(() => document.getElementById('pass-input').focus(), 100); }
+    document.querySelectorAll('.tab-bar > .tab').forEach((t, i) => t.classList.toggle('active', (i===0&&v==='patient')||(i===1&&v==='pro')));
+    document.getElementById('view-patient').classList.toggle('active', v === 'patient');
+    document.getElementById('view-pro').classList.toggle('active', v === 'pro');
+    if (v === 'pro') {
+      if (isUnlocked) { show('pro-panel'); hide('lock-screen'); renderDaily(); }
+      else { show('lock-screen'); hide('pro-panel'); setTimeout(() => document.getElementById('pass-input').focus(), 100); }
     }
   }
 
@@ -260,7 +425,7 @@
     if (val === ACCESS_PASS) {
       isUnlocked = true;
       document.getElementById('pass-input').value = '';
-      hide('lock-error'); hide('lock-screen'); show('daily-screen');
+      hide('lock-error'); hide('lock-screen'); show('pro-panel');
       renderDaily();
     } else {
       show('lock-error');
@@ -269,13 +434,26 @@
     }
   }
 
-  function lockScreen() { isUnlocked = false; hide('daily-screen'); show('lock-screen'); }
+  function lockScreen() { isUnlocked = false; hide('pro-panel'); show('lock-screen'); }
 
+  /* ---------- SUB-TABS (within pro panel) ---------- */
+  function showSubtab(name) {
+    document.querySelectorAll('.subtab').forEach((el, i) => {
+      const map = ['tokens','new-patient','agenda'];
+      el.classList.toggle('active', map[i] === name);
+    });
+    document.querySelectorAll('.subview').forEach(el => el.classList.remove('active'));
+    document.getElementById('sub-' + name).classList.add('active');
+    if (name === 'tokens') renderDaily();
+    if (name === 'agenda') renderAgenda();
+  }
+
+  /* ---------- PATIENT FLOW (token collection) ---------- */
   function checkDni() {
     const dni = document.getElementById('dni-input').value.trim();
     if (!dni || dni.length < 7) { alert('Ingresá un DNI válido.'); return; }
     currentDni = dni;
-    const patients = getStore(P_KEY), sessions = getStore(S_KEY);
+    const patients = getStore(P_KEY, {}), sessions = getStore(S_KEY, {});
     if (patients[dni]) {
       const sess = sessions[dni] || { count: 0, firstDate: todayStr() };
       if (bizDaysDiff(sess.firstDate, todayStr()) >= 10 || sess.count >= 10) {
@@ -308,19 +486,21 @@
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
     el.classList.add('selected');
     document.getElementById('new-os').value = os;
-    document.getElementById('mutual-fields').style.display = os === 'Mutual Médica' ? '' : 'none';
+    const isMutual = os === 'Mutual Médica';
+    document.getElementById('mutual-fields').style.display = isMutual ? '' : 'none';
+    document.getElementById('afiliado-field').style.display = isMutual ? '' : 'none';
   }
 
   function submitToken() {
     const token = document.getElementById('ret-token').value.trim();
     if (!token) { alert('Ingresá el token.'); return; }
-    const patients = getStore(P_KEY), sessions = getStore(S_KEY);
+    const patients = getStore(P_KEY, {}), sessions = getStore(S_KEY, {});
     const p = patients[currentDni];
     const sess = sessions[currentDni] || { count: 0, firstDate: todayStr() };
     sess.count++;
     sessions[currentDni] = sess;
     setStore(S_KEY, sessions);
-    const entry = { name: p.name, os: p.os, token, afiliado: p.afiliado, session: sess.count, mutual: p.mutual || null };
+    const entry = { name: p.name, phone: p.phone || '', os: p.os, token, afiliado: p.afiliado, session: sess.count, mutual: p.mutual || null };
     addToday(entry);
     sendToSheet(entry, currentDni);
     hide('step-returning'); show('step-done');
@@ -328,32 +508,45 @@
 
   function submitNew() {
     const name     = document.getElementById('new-name').value.trim();
+    const phoneRaw = document.getElementById('new-phone').value.trim();
     const os       = document.getElementById('new-os').value;
-    const afiliado = document.getElementById('new-afiliado').value.trim();
+    const afiliadoInput = document.getElementById('new-afiliado').value.trim();
     const token    = document.getElementById('new-token').value.trim();
-    if (!name || !os || !afiliado || !token) { alert('Completá todos los campos obligatorios.'); return; }
+    if (!name || !phoneRaw || !os || !token) { alert('Completá todos los campos obligatorios.'); return; }
+
+    const phone = phoneRaw.replace(/[^\d+]/g, '');
     let mutual = null;
+    let afiliado = '';
+
     if (os === 'Mutual Médica') {
+      if (!afiliadoInput) { alert('Para Mutual Médica necesitamos tu número de afiliado.'); return; }
+      afiliado = afiliadoInput;
       const medico      = document.getElementById('new-medico').value.trim();
       const matricula   = document.getElementById('new-matricula').value.trim();
       const diagnostico = document.getElementById('new-diagnostico').value.trim();
       if (!medico || !matricula || !diagnostico) { alert('Completá los datos del médico prescriptor.'); return; }
       mutual = { medico, matricula, provincia: 'Córdoba', diagnostico, practica: '250101' };
     }
-    const patients = getStore(P_KEY);
-    patients[currentDni] = { name, os, afiliado, mutual };
+
+    // Cruce con agenda: si el teléfono coincide con un turno cargado por el kinesiólogo,
+    // vinculamos el registro (útil para futuros recordatorios automáticos)
+    const agendaData = getStore(A_KEY, []);
+    const agendaMatch = agendaData.find(a => a.phone === phone);
+
+    const patients = getStore(P_KEY, {});
+    patients[currentDni] = { name, phone, os, afiliado, mutual };
     setStore(P_KEY, patients);
-    const sessions = getStore(S_KEY);
+    const sessions = getStore(S_KEY, {});
     sessions[currentDni] = { count: 1, firstDate: todayStr() };
     setStore(S_KEY, sessions);
-    const entry = { name, os, token, afiliado, session: 1, mutual };
+    const entry = { name, phone, os, token, afiliado, session: 1, mutual, agendaLinked: !!agendaMatch };
     addToday(entry);
     sendToSheet(entry, currentDni);
     hide('step-new'); show('step-done');
   }
 
   function addToday(entry) {
-    const list = getStore(T_KEY);
+    const list = getStore(T_KEY, []);
     const now = new Date();
     list.push({ ...entry, time: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), date: todayStr() });
     setStore(T_KEY, list);
@@ -365,6 +558,7 @@
       fecha: now.toLocaleDateString('es-AR'),
       hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
       nombre: entry.name, dni,
+      telefono: entry.phone || '',
       obraSocial: entry.os, afiliado: entry.afiliado,
       token: entry.token, sesion: entry.session,
       medico: entry.mutual?.medico || '',
@@ -377,7 +571,7 @@
   }
 
   function renderDaily() {
-    const list = getStore(T_KEY);
+    const list = getStore(T_KEY, []);
     const container = document.getElementById('daily-list');
     document.getElementById('today-date').textContent = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
     const todayList = list.filter(e => e.date === todayStr());
@@ -389,7 +583,9 @@
           <div class="di-name">${e.name}</div>
           <div class="di-meta">
             Token: <strong>${e.token}</strong> · Sesión ${e.session} · ${e.time}<br>
-            ${e.mutual ? `Afil: ${e.afiliado} · ${e.mutual.medico} (${e.mutual.matricula})<br>Diag: ${e.mutual.diagnostico} · Práct: 250101 · Prov: Córdoba` : `Afil: ${e.afiliado}`}
+            ${e.mutual
+              ? `Afil: ${e.afiliado} · ${e.mutual.medico} (${e.mutual.matricula})<br>Diag: ${e.mutual.diagnostico} · Práct: 250101 · Prov: Córdoba`
+              : `Tel: ${e.phone || '—'}`}
           </div>
         </div>
         <div class="di-right">
@@ -403,6 +599,223 @@
     currentDni = '';
     document.getElementById('dni-input').value = '';
     hide('step-returning'); hide('step-new'); hide('step-done'); show('step-dni');
+  }
+
+  /* ---------- AGENDA MODULE ---------- */
+  const DAYS_ES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const MONTHS_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const PALETTE = ['#0c447c','#3b6d11','#854f0b','#7c3aed','#be185d','#0f766e','#b45309','#4338ca'];
+  let pendingDays = [];
+  let editingPatientKey = null;
+  let editingDate = null;
+
+  function colorForName(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return PALETTE[Math.abs(hash) % PALETTE.length];
+  }
+
+  function addBusinessDays(startDate, count) {
+    const days = [];
+    let d = new Date(startDate);
+    let added = 0;
+    while (added < count) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) { days.push(new Date(d)); added++; }
+      if (added < count) d.setDate(d.getDate() + 1);
+    }
+    return days;
+  }
+
+  function generatePreview() {
+    const name = document.getElementById('ag-name').value.trim();
+    const phoneRaw = document.getElementById('ag-phone').value.trim();
+    const datetime = document.getElementById('ag-datetime').value;
+    const sessions = parseInt(document.getElementById('ag-sessions').value);
+
+    if (!name || !phoneRaw || !datetime || !sessions || sessions < 1) {
+      alert('Completá todos los campos.');
+      return;
+    }
+
+    const phone = phoneRaw.replace(/[^\d+]/g, '');
+    const start = new Date(datetime);
+    const time = start.toTimeString().slice(0,5);
+
+    pendingDays = addBusinessDays(start, sessions).map(d => ({ date: d, checked: true }));
+
+    document.getElementById('preview-days').innerHTML = pendingDays.map((item, i) => {
+      const d = item.date;
+      const label = `${DAYS_ES[d.getDay()]} ${d.getDate()} ${MONTHS_ES[d.getMonth()]}`;
+      return `
+        <div class="day-row">
+          <div class="day-check checked" id="chk-${i}" onclick="toggleDay(${i})">✓</div>
+          <div class="day-label">${label}</div>
+          <div class="day-num">${time}hs · sesión ${i+1}</div>
+        </div>`;
+    }).join('');
+
+    window._tempAgendaData = { name, phone, time, sessions };
+    hide('ag-step-form'); show('ag-step-preview');
+  }
+
+  function toggleDay(i) {
+    pendingDays[i].checked = !pendingDays[i].checked;
+    document.getElementById('chk-' + i).classList.toggle('checked', pendingDays[i].checked);
+  }
+
+  function backToForm() { hide('ag-step-preview'); show('ag-step-form'); }
+
+  function confirmSchedule() {
+    const { name, phone, time } = window._tempAgendaData;
+    const confirmedDays = pendingDays.filter(d => d.checked);
+    const agendaData = getStore(A_KEY, []);
+    const patientKey = name.trim().toLowerCase() + '|' + phone;
+
+    confirmedDays.forEach((item, i) => {
+      agendaData.push({
+        name, phone, time,
+        patientKey,
+        date: item.date.toISOString().split('T')[0],
+        dateLabel: `${DAYS_ES[item.date.getDay()]} ${item.date.getDate()} ${MONTHS_ES[item.date.getMonth()]}`,
+        session: i + 1,
+        total: confirmedDays.length
+      });
+    });
+    setStore(A_KEY, agendaData);
+
+    document.getElementById('ag-success-detail').textContent = `${confirmedDays.length} mensajes de WhatsApp programados para ${name}`;
+    hide('ag-step-preview'); show('ag-step-success');
+  }
+
+  function resetAgendaForm() {
+    document.getElementById('ag-name').value = '';
+    document.getElementById('ag-phone').value = '';
+    document.getElementById('ag-datetime').value = '';
+    document.getElementById('ag-sessions').value = '';
+    hide('ag-step-success'); show('ag-step-form');
+  }
+
+  function renderAgenda() {
+    const agendaData = getStore(A_KEY, []);
+    const container = document.getElementById('agenda-content');
+    if (!agendaData.length) {
+      container.innerHTML = '<div class="card"><div class="empty-state">Todavía no agendaste pacientes</div></div>';
+      return;
+    }
+    const byDate = {};
+    agendaData.forEach(item => {
+      if (!byDate[item.date]) byDate[item.date] = { label: item.dateLabel, items: [] };
+      byDate[item.date].items.push(item);
+    });
+    const sortedDates = Object.keys(byDate).sort();
+
+    container.innerHTML = sortedDates.map(date => {
+      const group = byDate[date];
+      group.items.sort((a,b) => a.time.localeCompare(b.time));
+      return `
+        <div class="day-group">
+          <div class="day-group-label">${group.label}</div>
+          ${group.items.map(p => {
+            const color = colorForName(p.name);
+            return `
+            <div class="patient-card" style="--pcolor:${color}">
+              <div class="patient-time">${p.time}</div>
+              <div class="patient-info">
+                <div class="patient-name"><span class="patient-dot" style="background:${color}"></span>${p.name}</div>
+                <div class="patient-meta">${p.phone} · sesión ${p.session}/${p.total}</div>
+              </div>
+              <div class="card-actions">
+                <button class="icon-btn" onclick="openEdit('${p.patientKey}','${p.date}')">✎</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  function openEdit(patientKey, date) {
+    const agendaData = getStore(A_KEY, []);
+    const entry = agendaData.find(e => e.patientKey === patientKey && e.date === date);
+    if (!entry) return;
+    editingPatientKey = patientKey;
+    editingDate = date;
+    document.getElementById('modal-patient-title').textContent = entry.name + ' — ' + entry.dateLabel;
+    document.getElementById('edit-name').value = entry.name;
+    document.getElementById('edit-phone').value = entry.phone;
+    document.getElementById('edit-time').value = entry.time;
+    showModalDefaultView();
+    document.getElementById('edit-modal').classList.add('active');
+  }
+
+  function showModalDefaultView() {
+    show('modal-edit-fields');
+    document.getElementById('modal-confirm-fields').style.display = 'none';
+    document.getElementById('modal-actions-default').style.display = '';
+    document.getElementById('modal-actions-confirm').style.display = 'none';
+  }
+
+  function closeModal() {
+    document.getElementById('edit-modal').classList.remove('active');
+    editingPatientKey = null;
+    editingDate = null;
+  }
+
+  function saveEdit() {
+    const newName = document.getElementById('edit-name').value.trim();
+    const newPhone = document.getElementById('edit-phone').value.trim().replace(/[^\d+]/g, '');
+    const newTime = document.getElementById('edit-time').value;
+    if (!newName || !newPhone || !newTime) { alert('Completá todos los campos.'); return; }
+
+    let agendaData = getStore(A_KEY, []);
+    const newKey = newName.toLowerCase() + '|' + newPhone;
+    agendaData = agendaData.map(e => {
+      if (e.patientKey === editingPatientKey && e.date === editingDate) {
+        return { ...e, name: newName, phone: newPhone, time: newTime, patientKey: newKey };
+      }
+      return e;
+    });
+    setStore(A_KEY, agendaData);
+    closeModal();
+    renderAgenda();
+  }
+
+  function askDeleteOne() {
+    document.getElementById('modal-edit-fields').style.display = 'none';
+    document.getElementById('modal-confirm-fields').style.display = '';
+    document.getElementById('modal-confirm-text').textContent = '¿Eliminar este turno puntual? Esta acción no se puede deshacer.';
+    document.getElementById('modal-actions-default').style.display = 'none';
+    document.getElementById('modal-actions-confirm').style.display = '';
+    document.getElementById('modal-confirm-btn').onclick = doDeleteOne;
+  }
+
+  function askDeleteAll() {
+    document.getElementById('modal-edit-fields').style.display = 'none';
+    document.getElementById('modal-confirm-fields').style.display = '';
+    document.getElementById('modal-confirm-text').textContent = '¿Eliminar TODAS las sesiones de este paciente? Esta acción no se puede deshacer.';
+    document.getElementById('modal-actions-default').style.display = 'none';
+    document.getElementById('modal-actions-confirm').style.display = '';
+    document.getElementById('modal-confirm-btn').onclick = doDeleteAll;
+  }
+
+  function cancelDeleteConfirm() {
+    showModalDefaultView();
+  }
+
+  function doDeleteOne() {
+    let agendaData = getStore(A_KEY, []);
+    agendaData = agendaData.filter(e => !(e.patientKey === editingPatientKey && e.date === editingDate));
+    setStore(A_KEY, agendaData);
+    closeModal();
+    renderAgenda();
+  }
+
+  function doDeleteAll() {
+    let agendaData = getStore(A_KEY, []);
+    agendaData = agendaData.filter(e => e.patientKey !== editingPatientKey);
+    setStore(A_KEY, agendaData);
+    closeModal();
+    renderAgenda();
   }
 
   function show(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
