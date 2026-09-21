@@ -162,6 +162,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .manual-auth-row { display: flex; gap: 8px; margin-top: 8px; }
 .manual-auth-row input { flex: 1; padding: 9px 12px; font-size: 15px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; }
 .manual-auth-row button { padding: 9px 14px; font-size: 13px; font-weight: 600; border: none; border-radius: var(--radius-sm); background: var(--text); color: var(--bg); cursor: pointer; white-space: nowrap; }
+
+/* Indicador de conexión */
+.sync-indicator { font-size: 11px; color: var(--text3); text-align: right; padding: 4px 0 8px; }
+.sync-ok { color: var(--green-text); }
+.sync-err { color: var(--err-text); }
 </style>
 </head>
 <body>
@@ -323,8 +328,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <!-- SUBVIEW: TOKENS DEL DÍA -->
     <div id="sub-tokens" class="view subview active">
       <div class="card">
-        <div class="day-header">Tokens del día — <span id="today-date"></span></div>
-        <div id="daily-list"><div class="empty-state">Aún no hay registros hoy</div></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <div class="day-header" style="margin-bottom:0;">Tokens del día — <span id="today-date"></span></div>
+          <button onclick="renderDaily()" style="font-size:12px; background:var(--bg2); border:0.5px solid var(--border2); color:var(--text2); padding:4px 10px; border-radius:6px; cursor:pointer;">↻ Actualizar</button>
+        </div>
+        <div id="sync-status" class="sync-indicator"></div>
+        <div id="daily-list"><div class="empty-state">Cargando…</div></div>
       </div>
       <div class="info-box">
         Los tokens de Sancor y Prevención Salud se autorizan automáticamente en Octus cuando el paciente los envía. Mutual Médica se gestiona por su portal separado — los datos están listos para copiar.
@@ -427,17 +436,75 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CONFIGURACIÓN
+   CONFIGURACIÓN SUPABASE
 ═══════════════════════════════════════════════════════════ */
-const SHEET_URL  = 'https://script.google.com/macros/s/AKfycbz_rUPwMnsHn6IcNvHYqRMu11m1rijxr_iRDrnsXg2-rCiGrZ8XJyGL9vxFhJOWgpWT/exec';
-const ACCESS_PASS = 'kine5393';
+const SUPABASE_URL  = 'https://tbxtdtlahkabqvfgjqnv.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_PTi2smcEXf_ZnD5PN2FieQ_4NXPcV3p';
+const KINE_ID       = '00000000-0000-0000-0000-000000000001'; // Mario (piloto)
+const ACCESS_PASS   = 'kine5393';
 
-// Claves localStorage
-const P_KEY    = 'gesalia_patients_v1';   // datos de pacientes
-const S_KEY    = 'gesalia_sessions_v1';   // contadores de sesión
-const T_KEY    = 'gesalia_today_v1';      // tokens del día
-const A_KEY    = 'gesalia_agenda_v1';     // agenda
-const AUTH_KEY = 'gesalia_autorizados_v1'; // autorizaciones Octus
+// Agenda sigue en localStorage (no es dato médico, es organización local de Mario)
+const A_KEY = 'gesalia_agenda_v1';
+
+/* ═══════════════════════════════════════════════════════════
+   CLIENTE SUPABASE — fetch wrapper liviano
+═══════════════════════════════════════════════════════════ */
+const db = {
+  async query(table, params = '') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async insert(table, data) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async update(table, filter, data) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async upsert(table, data, onConflict) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation,resolution=merge-duplicates'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+};
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS
@@ -447,6 +514,7 @@ const setStore  = (k, v)  => { try { localStorage.setItem(k, JSON.stringify(v));
 const todayStr  = () => new Date().toISOString().split('T')[0];
 const show = id => { const el = document.getElementById(id); if (el) el.style.display = ''; };
 const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+const nowTime = () => new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
 function bizDaysDiff(from, to) {
   let count = 0, d = new Date(from), end = new Date(to);
@@ -454,7 +522,6 @@ function bizDaysDiff(from, to) {
   return count;
 }
 
-// Muestra la pista correcta según la obra social
 function setTokenHint(os, retOrNew) {
   const prefix = retOrNew === 'ret' ? 'ret-token-hint' : 'new-token-hint';
   const el = document.getElementById(prefix);
@@ -468,10 +535,10 @@ function setTokenHint(os, retOrNew) {
    ESTADO GLOBAL
 ═══════════════════════════════════════════════════════════ */
 let currentDni = '';
+let currentPatientData = null; // datos del paciente en flujo activo
 let isUnlocked = false;
-let currentPatientOs = '';    // OS del paciente en flujo activo
-let octusListener = null;     // handler postMessage activo
-let octusTimeout = null;      // timeout de seguridad
+let octusListener = null;
+let octusTimeout = null;
 
 /* ═══════════════════════════════════════════════════════════
    TABS PRINCIPALES
@@ -521,42 +588,75 @@ function showSubtab(name) {
 /* ═══════════════════════════════════════════════════════════
    FLUJO PACIENTE — PASO 1: DNI
 ═══════════════════════════════════════════════════════════ */
-function checkDni() {
+async function checkDni() {
   const dni = document.getElementById('dni-input').value.trim();
   if (!dni || dni.length < 7) { alert('Ingresá un DNI válido.'); return; }
   currentDni = dni;
 
-  // ¿Ya envió token hoy?
-  const todayList = getStore(T_KEY, []).filter(e => e.date === todayStr());
-  const yaEnvio = todayList.find(e => e.dni === dni);
-  if (yaEnvio) {
-    mostrarResultadoPaciente(yaEnvio);
-    hide('step-dni'); show('step-done');
-    return;
-  }
+  const btn = document.querySelector('#step-dni .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
 
-  const patients  = getStore(P_KEY, {});
-  const sessions  = getStore(S_KEY, {});
-
-  if (patients[dni]) {
-    const sess = sessions[dni] || { count: 0, firstDate: todayStr() };
-    // Si pasaron 10 días hábiles o 10 sesiones → nueva tanda
-    if (bizDaysDiff(sess.firstDate, todayStr()) >= 10 || sess.count >= 10) {
-      delete patients[dni]; setStore(P_KEY, patients);
-      delete sessions[dni]; setStore(S_KEY, sessions);
-      showNewForm(); return;
+  try {
+    // Verificar si ya envió token hoy
+    const todayTokens = await db.query('tokens',
+      `?kinesiologo_id=eq.${KINE_ID}&paciente_dni=eq.${dni}&fecha=eq.${todayStr()}&select=*`
+    );
+    if (todayTokens.length > 0) {
+      const t = todayTokens[0];
+      mostrarResultadoPaciente({
+        os: t.obra_social, authStatus: t.auth_status,
+        nroAuth: t.nro_autorizacion, name: t.paciente_nombre
+      });
+      hide('step-dni'); show('step-done');
+      btn.disabled = false; btn.textContent = 'Continuar →';
+      return;
     }
-    const p = patients[dni];
-    currentPatientOs = p.os;
-    document.getElementById('ret-name').textContent = p.name;
-    document.getElementById('ret-os').textContent   = p.os;
-    document.getElementById('ret-sessions').textContent = sess.count + ' de 10';
-    renderDots(sess.count);
-    setTokenHint(p.os, 'ret');
-    hide('step-dni'); show('step-returning');
-  } else {
-    showNewForm();
+
+    // Buscar si es paciente conocido
+    const pacientes = await db.query('pacientes',
+      `?kinesiologo_id=eq.${KINE_ID}&dni=eq.${dni}&select=*`
+    );
+
+    if (pacientes.length > 0) {
+      const p = pacientes[0];
+      currentPatientData = p;
+
+      // Contar sesiones de los últimos 10 días hábiles
+      const allTokens = await db.query('tokens',
+        `?kinesiologo_id=eq.${KINE_ID}&paciente_dni=eq.${dni}&select=id,fecha&order=fecha.desc`
+      );
+
+      // Determinar si sigue en la misma tanda (últimas 10 sesiones)
+      const ultimasSesiones = allTokens.slice(0, 10);
+      const count = ultimasSesiones.length;
+
+      // Si tiene 10 sesiones y la primera fue hace más de 10 días hábiles → nueva tanda
+      if (count >= 10 && ultimasSesiones.length > 0) {
+        const firstDate = ultimasSesiones[ultimasSesiones.length - 1].fecha;
+        if (bizDaysDiff(firstDate, todayStr()) > 10) {
+          // Nueva tanda — mostrar como nuevo
+          showNewForm();
+          btn.disabled = false; btn.textContent = 'Continuar →';
+          return;
+        }
+      }
+
+      document.getElementById('ret-name').textContent = p.nombre;
+      document.getElementById('ret-os').textContent   = p.obra_social;
+      document.getElementById('ret-sessions').textContent = count + ' de 10';
+      renderDots(count);
+      setTokenHint(p.obra_social, 'ret');
+      hide('step-dni'); show('step-returning');
+    } else {
+      showNewForm();
+    }
+  } catch(e) {
+    console.error(e);
+    alert('Error de conexión. Verificá internet e intentá de nuevo.');
   }
+
+  btn.disabled = false; btn.textContent = 'Continuar →';
 }
 
 function renderDots(done) {
@@ -577,7 +677,6 @@ function selectOs(el, os) {
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
   document.getElementById('new-os').value = os;
-  currentPatientOs = os;
   const isMutual = os === 'Mutual Médica';
   document.getElementById('mutual-fields').style.display   = isMutual ? '' : 'none';
   document.getElementById('afiliado-field').style.display  = isMutual ? '' : 'none';
@@ -586,7 +685,7 @@ function selectOs(el, os) {
 
 function resetView() {
   currentDni = '';
-  currentPatientOs = '';
+  currentPatientData = null;
   document.getElementById('dni-input').value = '';
   hide('step-returning'); hide('step-new'); hide('step-done'); hide('step-waiting');
   show('step-dni');
@@ -595,46 +694,49 @@ function resetView() {
 /* ═══════════════════════════════════════════════════════════
    FLUJO PACIENTE — PASO 2A: PACIENTE QUE VUELVE
 ═══════════════════════════════════════════════════════════ */
-function submitToken() {
+async function submitToken() {
   const token = document.getElementById('ret-token').value.trim();
   if (!token) { alert('Ingresá el token.'); return; }
 
-  const patients = getStore(P_KEY, {});
-  const sessions = getStore(S_KEY, {});
-  const p        = patients[currentDni];
-  const sess     = sessions[currentDni] || { count: 0, firstDate: todayStr() };
-
-  sess.count++;
-  sessions[currentDni] = sess;
-  setStore(S_KEY, sessions);
+  const p = currentPatientData;
+  const btn = document.getElementById('ret-submit-btn');
+  btn.disabled = true;
 
   const entry = {
-    name:    p.name,
-    phone:   p.phone || '',
-    os:      p.os,
+    kinesiologo_id: KINE_ID,
+    paciente_nombre: p.nombre,
+    paciente_dni: currentDni,
+    obra_social: p.obra_social,
     token,
-    afiliado: p.afiliado || '',
-    session:  sess.count,
-    mutual:   p.mutual || null,
-    dni:      currentDni
+    fecha: todayStr(),
+    auth_status: 'pending'
   };
 
-  addToday(entry);
-  sendToSheet(entry, currentDni);
+  try {
+    const [inserted] = await db.insert('tokens', entry);
+    entry.id = inserted.id;
+  } catch(e) {
+    console.error(e);
+    // Si ya existe un token hoy (doble submit), continuar igual
+  }
 
-  // Bloquear botón para evitar doble envío
-  document.getElementById('ret-submit-btn').disabled = true;
-
-  // Mostrar pantalla de espera y disparar Octus
   hide('step-returning');
   show('step-waiting');
-  iniciarAutorizacionOctus(entry);
+
+  iniciarAutorizacionOctus({
+    name: p.nombre,
+    os: p.obra_social,
+    token,
+    dni: currentDni,
+    afiliado: p.afiliado || '',
+    tokenId: entry.id
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
    FLUJO PACIENTE — PASO 2B: PACIENTE NUEVO
 ═══════════════════════════════════════════════════════════ */
-function submitNew() {
+async function submitNew() {
   const name      = document.getElementById('new-name').value.trim();
   const phoneRaw  = document.getElementById('new-phone').value.trim();
   const os        = document.getElementById('new-os').value;
@@ -643,9 +745,9 @@ function submitNew() {
 
   if (!name || !phoneRaw || !os || !token) { alert('Completá todos los campos obligatorios.'); return; }
 
-  const phone   = phoneRaw.replace(/[^\d+]/g, '');
-  let mutual    = null;
-  let afiliado  = '';
+  const phone = phoneRaw.replace(/[^\d+]/g, '');
+  let afiliado = '';
+  let mutualJson = null;
 
   if (os === 'Mutual Médica') {
     if (!afiliadoInput) { alert('Para Mutual Médica necesitamos tu número de afiliado.'); return; }
@@ -654,99 +756,73 @@ function submitNew() {
     const matricula   = document.getElementById('new-matricula').value.trim();
     const diagnostico = document.getElementById('new-diagnostico').value.trim();
     if (!medico || !matricula || !diagnostico) { alert('Completá los datos del médico prescriptor.'); return; }
-    mutual = { medico, matricula, provincia: 'Córdoba', diagnostico, practica: '250101' };
+    mutualJson = { medico, matricula, provincia: 'Córdoba', diagnostico, practica: '250101' };
   }
 
-  const patients = getStore(P_KEY, {});
-  patients[currentDni] = { name, phone, os, afiliado, mutual };
-  setStore(P_KEY, patients);
+  const btn = document.getElementById('new-submit-btn');
+  btn.disabled = true;
 
-  const sessions = getStore(S_KEY, {});
-  sessions[currentDni] = { count: 1, firstDate: todayStr() };
-  setStore(S_KEY, sessions);
+  try {
+    // Guardar paciente (upsert por si ya existe)
+    await db.upsert('pacientes', {
+      kinesiologo_id: KINE_ID,
+      nombre: name,
+      dni: currentDni,
+      obra_social: os,
+      telefono: phone,
+      afiliado,
+      mutual: mutualJson
+    }, 'kinesiologo_id,dni');
 
-  const entry = { name, phone, os, token, afiliado, session: 1, mutual, dni: currentDni };
-  addToday(entry);
-  sendToSheet(entry, currentDni);
+    // Insertar token
+    const tokenEntry = {
+      kinesiologo_id: KINE_ID,
+      paciente_nombre: name,
+      paciente_dni: currentDni,
+      obra_social: os,
+      token,
+      fecha: todayStr(),
+      auth_status: 'pending'
+    };
+    const [inserted] = await db.insert('tokens', tokenEntry);
 
-  // Bloquear botón
-  document.getElementById('new-submit-btn').disabled = true;
+    hide('step-new');
+    show('step-waiting');
 
-  hide('step-new');
-  show('step-waiting');
-  iniciarAutorizacionOctus(entry);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ALMACENAMIENTO LOCAL
-═══════════════════════════════════════════════════════════ */
-function addToday(entry) {
-  const list = getStore(T_KEY, []);
-  const now  = new Date();
-  list.push({
-    ...entry,
-    time: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-    date: todayStr(),
-    authStatus: 'pending'   // 'pending' | 'ok' | 'error' | 'manual'
-  });
-  setStore(T_KEY, list);
-}
-
-function sendToSheet(entry, dni) {
-  const now = new Date();
-  const payload = {
-    fecha:       now.toLocaleDateString('es-AR'),
-    hora:        now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-    nombre:      entry.name, dni,
-    telefono:    entry.phone || '',
-    obraSocial:  entry.os,
-    afiliado:    entry.afiliado || '',
-    token:       entry.token,
-    sesion:      entry.session,
-    medico:      entry.mutual?.medico     || '',
-    matricula:   entry.mutual?.matricula  || '',
-    diagnostico: entry.mutual?.diagnostico || '',
-    practica:    entry.mutual?.practica   || '',
-    provincia:   entry.mutual?.provincia  || ''
-  };
-  fetch(SHEET_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
+    iniciarAutorizacionOctus({
+      name, os, token, dni: currentDni, afiliado,
+      mutual: mutualJson, tokenId: inserted?.id
+    });
+  } catch(e) {
+    console.error(e);
+    btn.disabled = false;
+    alert('Error al guardar. Verificá internet e intentá de nuevo.');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
    AUTORIZACIÓN EN OCTUS
-   Disparo automático al enviar token.
-   Para Mutual Médica → resultado manual inmediato.
-   Para Sancor / Prevención → abre Octus, espera postMessage.
 ═══════════════════════════════════════════════════════════ */
 function iniciarAutorizacionOctus(entry) {
   const { os, token, name, dni } = entry;
 
-  // Mutual Médica: no va por Octus, mostrar resultado con datos para copiar
+  // Mutual Médica: no va por Octus
   if (os === 'Mutual Médica') {
-    actualizarAuthStatus(dni, 'manual', null);
+    actualizarAuthStatus(entry, 'manual', null);
     mostrarResultadoPaciente({ ...entry, authStatus: 'manual' });
     hide('step-waiting'); show('step-done');
     return;
   }
 
   // Sancor / Prevención Salud → Octus automático
-  // Guardar pedido en sessionStorage para el script de automatización
   const pending = { token, nombre: name, dni, timestamp: Date.now() };
   try { sessionStorage.setItem('gesalia_octus_pending', JSON.stringify(pending)); } catch(e) {}
 
-  // Abrir Octus en nueva pestaña (ya está logueado en Chrome de Mario)
   window.open('https://www.octus.com.ar/pacientes', '_blank');
 
-  // Limpiar listeners anteriores si los hubiera
   if (octusListener) window.removeEventListener('message', octusListener);
   clearTimeout(octusTimeout);
 
-  // Escuchar respuesta del script de automatización
   octusListener = (event) => {
     if (event.origin !== 'https://www.octus.com.ar') return;
     const data = event.data;
@@ -757,43 +833,38 @@ function iniciarAutorizacionOctus(entry) {
     octusListener = null;
 
     if (data.success && data.nroAuth) {
-      actualizarAuthStatus(dni, 'ok', data.nroAuth);
+      actualizarAuthStatus(entry, 'ok', data.nroAuth);
       mostrarResultadoPaciente({ ...entry, authStatus: 'ok', nroAuth: data.nroAuth });
     } else {
-      actualizarAuthStatus(dni, 'error', null);
+      actualizarAuthStatus(entry, 'error', null);
       mostrarResultadoPaciente({ ...entry, authStatus: 'error' });
     }
     hide('step-waiting'); show('step-done');
   };
   window.addEventListener('message', octusListener);
 
-  // Timeout 3 minutos — suficiente para cualquier token
+  // Timeout 3 minutos
   octusTimeout = setTimeout(() => {
     if (octusListener) window.removeEventListener('message', octusListener);
     octusListener = null;
-    actualizarAuthStatus(dni, 'error', null);
+    actualizarAuthStatus(entry, 'error', null);
     mostrarResultadoPaciente({ ...entry, authStatus: 'error' });
     hide('step-waiting'); show('step-done');
   }, 180000);
 }
 
-// Actualiza el estado de autorización en la lista T_KEY
-function actualizarAuthStatus(dni, status, nroAuth) {
-  const list = getStore(T_KEY, []);
-  const today = todayStr();
-  for (const e of list) {
-    if (e.dni === dni && e.date === today) {
-      e.authStatus = status;
-      if (nroAuth) e.nroAuth = nroAuth;
-      break;
-    }
+async function actualizarAuthStatus(entry, status, nroAuth) {
+  if (!entry.tokenId) return;
+  try {
+    const upd = { auth_status: status };
+    if (nroAuth) upd.nro_autorizacion = nroAuth;
+    await db.update('tokens', `id=eq.${entry.tokenId}`, upd);
+    if (isUnlocked) renderDaily();
+  } catch(e) {
+    console.error('Error actualizando estado:', e);
   }
-  setStore(T_KEY, list);
-  // Si el panel profesional está abierto, refrescarlo también
-  if (isUnlocked) renderDaily();
 }
 
-// Muestra la pantalla de resultado al paciente según el estado
 function mostrarResultadoPaciente(entry) {
   const { os, authStatus, nroAuth, name } = entry;
   const iconEl  = document.getElementById('done-icon');
@@ -804,320 +875,323 @@ function mostrarResultadoPaciente(entry) {
 
   nroWrap.style.display = 'none';
 
-  if (os === 'Mutual Médica') {
-    iconEl.textContent  = '✅';
+  if (authStatus === 'manual') {
+    iconEl.textContent  = '📋';
     titleEl.textContent = 'Token recibido';
-    subEl.textContent   = 'Tu kinesiólogo va a gestionar la autorización de Mutual Médica. Ya tiene todos tus datos. ¡Hasta pronto!';
-    return;
-  }
-
-  if (authStatus === 'ok' && nroAuth) {
+    subEl.textContent   = 'Tu kinesiólogo recibió el token y va a gestionar la autorización por el portal de Mutual Médica.';
+  } else if (authStatus === 'ok' && nroAuth) {
     iconEl.textContent  = '✅';
     titleEl.textContent = '¡Sesión autorizada!';
-    subEl.textContent   = 'La autorización fue aprobada. Tu kinesiólogo ya tiene todo listo.';
+    subEl.textContent   = 'Tu sesión está lista. Nº de autorización:';
+    nroEl.textContent   = nroAuth;
     nroWrap.style.display = '';
-    nroEl.textContent  = nroAuth;
-    return;
-  }
-
-  if (authStatus === 'error') {
+  } else {
     iconEl.textContent  = '⚠️';
-    titleEl.textContent = 'Token registrado';
-    subEl.textContent   = 'Tu token fue guardado. La autorización en la obra social la gestiona tu kinesiólogo. Ya está avisado.';
-    return;
+    titleEl.textContent = 'Token guardado';
+    subEl.textContent   = 'Tu kinesiólogo ya fue avisado. Si hay algún inconveniente, lo resuelve antes de tu sesión.';
   }
-
-  // Fallback: ya había enviado token hoy
-  iconEl.textContent  = '✅';
-  titleEl.textContent = 'Ya enviaste tu token hoy';
-  subEl.textContent   = 'No hace falta hacer nada más. ¡Hasta la próxima sesión!';
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PANEL PROFESIONAL — TOKENS DEL DÍA
+   PANEL PROFESIONAL — TOKENS DEL DÍA (desde Supabase)
 ═══════════════════════════════════════════════════════════ */
-function renderDaily() {
-  const list      = getStore(T_KEY, []);
-  const container = document.getElementById('daily-list');
+async function renderDaily() {
+  const today = todayStr();
   document.getElementById('today-date').textContent =
     new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const todayList = list.filter(e => e.date === todayStr());
-  if (!todayList.length) {
-    container.innerHTML = '<div class="empty-state">Aún no hay registros hoy</div>';
-    return;
-  }
+  const statusEl = document.getElementById('sync-status');
+  const listEl   = document.getElementById('daily-list');
+  statusEl.textContent = 'Actualizando…';
+  statusEl.className   = 'sync-indicator';
 
-  const tagClass = { 'Sancor': 'tag-sancor', 'Prevención Salud': 'tag-prev', 'Mutual Médica': 'tag-mutual' };
+  try {
+    const tokens = await db.query('tokens',
+      `?kinesiologo_id=eq.${KINE_ID}&fecha=eq.${today}&select=*&order=created_at.asc`
+    );
 
-  container.innerHTML = todayList.map((e, idx) => {
-    const status   = e.authStatus || 'pending';
-    const isMutual = e.os === 'Mutual Médica';
+    statusEl.textContent = `Sincronizado · ${nowTime()}`;
+    statusEl.className   = 'sync-indicator sync-ok';
 
-    // Badge de estado
-    let statusBadge = '';
-    if (isMutual) {
-      statusBadge = `<span class="di-status status-mutual">Manual</span>`;
-    } else if (status === 'ok') {
-      statusBadge = `<span class="di-status status-ok">✓ Autorizado</span>`;
-    } else if (status === 'error') {
-      statusBadge = `<span class="di-status status-error">⚠ Error</span>`;
-    } else {
-      statusBadge = `<span class="di-status status-pending">⏳ Pendiente</span>`;
+    if (!tokens.length) {
+      listEl.innerHTML = '<div class="empty-state">Aún no hay registros hoy</div>';
+      return;
     }
 
-    // Número de autorización si lo hay
-    let authNroHtml = '';
-    if (status === 'ok' && e.nroAuth) {
-      authNroHtml = `<div class="di-auth-nro">Nº Auth: ${e.nroAuth}</div>`;
-    }
+    listEl.innerHTML = tokens.map((t, i) => {
+      const osClass = t.obra_social.includes('Sancor') ? 'tag-sancor' :
+                      t.obra_social.includes('Prevención') ? 'tag-prev' : 'tag-mutual';
 
-    // Datos de Mutual para copiar
-    let mutualDataHtml = '';
-    if (isMutual && e.mutual) {
-      mutualDataHtml = `
-        <div class="di-meta" style="margin-top:6px; padding:8px; background:var(--bg2); border-radius:6px;">
-          Afil: ${e.afiliado} · Médico: ${e.mutual.medico} (${e.mutual.matricula})<br>
-          Diag: ${e.mutual.diagnostico} · Práct: 250101 · Prov: Córdoba<br>
-          Token: <span class="di-token">${e.token}</span>
+      let statusBadge, extraHtml = '';
+
+      if (t.auth_status === 'ok') {
+        statusBadge = '<span class="di-status status-ok">✓ Autorizado</span>';
+        if (t.nro_autorizacion)
+          extraHtml += `<div class="di-auth-nro">Nº ${t.nro_autorizacion}</div>`;
+      } else if (t.auth_status === 'pending') {
+        statusBadge = '<span class="di-status status-pending">⏳ Pendiente</span>';
+        extraHtml += `<div class="manual-auth-row">
+          <input id="manual-auth-${i}" type="text" placeholder="Ingresar Nº autorización manualmente" inputmode="numeric">
+          <button onclick="guardarAuthManual('${t.id}','manual-auth-${i}')">Guardar</button>
         </div>`;
-    }
-
-    // Ingreso manual de Nº auth si hubo error en Octus
-    let manualInputHtml = '';
-    if (!isMutual && status === 'error') {
-      manualInputHtml = `
-        <div class="manual-auth-row">
-          <input type="number" placeholder="Nº autorización manual" id="manual-auth-${idx}" inputmode="numeric" />
-          <button onclick="guardarAuthManual(${idx})">Guardar</button>
+      } else if (t.auth_status === 'error') {
+        statusBadge = '<span class="di-status status-error">⚠ Error</span>';
+        extraHtml += `<div class="manual-auth-row">
+          <input id="manual-auth-${i}" type="text" placeholder="Ingresar Nº autorización manualmente" inputmode="numeric">
+          <button onclick="guardarAuthManual('${t.id}','manual-auth-${i}')">Guardar</button>
         </div>`;
-    }
+      } else {
+        // manual (Mutual Médica)
+        statusBadge = '<span class="di-status status-mutual">Manual</span>';
+        extraHtml += `
+          <div class="di-token">Token: ${t.token}</div>
+          <div class="di-token">OS: ${t.obra_social} · DNI: ${t.paciente_dni}</div>`;
+      }
 
-    return `
-      <div class="daily-item" id="daily-item-${idx}">
+      return `<div class="daily-item">
         <div class="di-header">
-          <div class="di-name">${e.name}</div>
+          <span class="di-name">${t.paciente_nombre}</span>
           ${statusBadge}
         </div>
         <div class="di-meta">
-          <span class="os-tag ${tagClass[e.os] || ''}">${e.os}</span>
-          &nbsp;· Sesión ${e.session} · ${e.time}
-          ${!isMutual ? `· Token: <span class="di-token">${e.token}</span>` : ''}
+          <span class="os-tag ${osClass}">${t.obra_social}</span>
+          · ${t.created_at ? new Date(t.created_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : ''}
         </div>
-        ${authNroHtml}
-        ${mutualDataHtml}
-        ${manualInputHtml}
+        ${extraHtml}
       </div>`;
-  }).join('');
+    }).join('');
+
+  } catch(e) {
+    console.error(e);
+    statusEl.textContent = 'Error de conexión';
+    statusEl.className   = 'sync-indicator sync-err';
+    listEl.innerHTML = '<div class="empty-state">No se pudo cargar. Revisá internet.</div>';
+  }
 }
 
-// Guardar Nº de autorización ingresado manualmente (cuando Octus falló)
-function guardarAuthManual(idx) {
-  const input = document.getElementById('manual-auth-' + idx);
-  const nro   = input?.value?.trim();
+async function guardarAuthManual(tokenId, inputId) {
+  const nro = document.getElementById(inputId)?.value?.trim();
   if (!nro) { alert('Ingresá el número de autorización.'); return; }
-
-  const list      = getStore(T_KEY, []);
-  const todayList = list.filter(e => e.date === todayStr());
-  const entry     = todayList[idx];
-  if (!entry) return;
-
-  actualizarAuthStatus(entry.dni, 'ok', nro);
-  renderDaily();
+  try {
+    await db.update('tokens', `id=eq.${tokenId}`, { auth_status: 'ok', nro_autorizacion: nro });
+    renderDaily();
+  } catch(e) {
+    alert('Error al guardar. Intentá de nuevo.');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AGENDA
+   AGENDA (sigue en localStorage — es organización de Mario)
 ═══════════════════════════════════════════════════════════ */
-const DAYS_ES   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-const MONTHS_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const PALETTE   = ['#0c447c','#3b6d11','#854f0b','#7c3aed','#be185d','#0f766e','#b45309','#4338ca'];
-let pendingDays = [];
-let editingPatientKey = null;
-let editingDate = null;
-
-function colorForName(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return PALETTE[Math.abs(hash) % PALETTE.length];
-}
-
-function addBusinessDays(startDate, count) {
-  const days = []; let d = new Date(startDate), added = 0;
-  while (added < count) {
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) { days.push(new Date(d)); added++; }
-    if (added < count) d.setDate(d.getDate() + 1);
-  }
-  return days;
-}
-
 function generatePreview() {
-  const name      = document.getElementById('ag-name').value.trim();
-  const phoneRaw  = document.getElementById('ag-phone').value.trim();
-  const datetime  = document.getElementById('ag-datetime').value;
-  const sessions  = parseInt(document.getElementById('ag-sessions').value);
-  if (!name || !phoneRaw || !datetime || !sessions || sessions < 1) { alert('Completá todos los campos.'); return; }
-  const phone = phoneRaw.replace(/[^\d+]/g, '');
-  const start = new Date(datetime);
-  const time  = start.toTimeString().slice(0, 5);
-  pendingDays = addBusinessDays(start, sessions).map(d => ({ date: d, checked: true }));
-  document.getElementById('preview-days').innerHTML = pendingDays.map((item, i) => {
-    const d = item.date;
-    return `<div class="day-row">
-      <div class="day-check checked" id="chk-${i}" onclick="toggleDay(${i})">✓</div>
-      <div class="day-label">${DAYS_ES[d.getDay()]} ${d.getDate()} ${MONTHS_ES[d.getMonth()]}</div>
-      <div class="day-num">${time}hs · sesión ${i+1}</div>
-    </div>`;
-  }).join('');
-  window._tempAgendaData = { name, phone, time, sessions };
-  hide('ag-step-form'); show('ag-step-preview');
+  const name = document.getElementById('ag-name').value.trim();
+  const phone = document.getElementById('ag-phone').value.trim();
+  const dtVal = document.getElementById('ag-datetime').value;
+  const sessCount = parseInt(document.getElementById('ag-sessions').value) || 10;
+  if (!name || !dtVal) { alert('Completá nombre y fecha de inicio.'); return; }
+
+  const start = new Date(dtVal);
+  const days = [];
+  let current = new Date(start);
+  while (days.length < sessCount) {
+    const d = current.getDay();
+    if (d !== 0 && d !== 6) days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  const container = document.getElementById('preview-days');
+  container.innerHTML = '';
+  days.forEach((d, i) => {
+    const label = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const timeStr = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const row = document.createElement('div');
+    row.className = 'day-row';
+    row.innerHTML = `
+      <div class="day-check checked" data-idx="${i}" onclick="toggleDay(this)">✓</div>
+      <span class="day-label">${label} <span class="day-num">${timeStr}</span></span>`;
+    container.appendChild(row);
+  });
+
+  window._previewDays = days;
+  window._previewName = name;
+  window._previewPhone = phone.replace(/[^\d+]/g, '');
+  window._previewTime = `${start.getHours().toString().padStart(2,'0')}:${start.getMinutes().toString().padStart(2,'0')}`;
+
+  document.getElementById('ag-step-form').style.display    = 'none';
+  document.getElementById('ag-step-preview').style.display = '';
 }
 
-function toggleDay(i) {
-  pendingDays[i].checked = !pendingDays[i].checked;
-  document.getElementById('chk-' + i).classList.toggle('checked', pendingDays[i].checked);
+function toggleDay(el) {
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
 }
 
-function backToForm() { hide('ag-step-preview'); show('ag-step-form'); }
+function backToForm() {
+  document.getElementById('ag-step-preview').style.display = 'none';
+  document.getElementById('ag-step-form').style.display    = '';
+}
 
 function confirmSchedule() {
-  const { name, phone, time } = window._tempAgendaData;
-  const confirmedDays = pendingDays.filter(d => d.checked);
-  const agendaData    = getStore(A_KEY, []);
-  const patientKey    = name.trim().toLowerCase() + '|' + phone;
-  confirmedDays.forEach((item, i) => {
-    agendaData.push({
-      name, phone, time, patientKey,
-      date:       item.date.toISOString().split('T')[0],
-      dateLabel:  `${DAYS_ES[item.date.getDay()]} ${item.date.getDate()} ${MONTHS_ES[item.date.getMonth()]}`,
-      session:    i + 1,
-      total:      confirmedDays.length
-    });
+  const checks = document.querySelectorAll('#preview-days .day-check');
+  const agenda = getStore(A_KEY, []);
+  const colors = ['#0c447c', '#3b6d11', '#6d4a11', '#6d116d', '#116d5f'];
+  const colorIdx = agenda.length % colors.length;
+
+  const selected = [];
+  checks.forEach((ch, i) => {
+    if (ch.classList.contains('checked') && window._previewDays[i]) {
+      const d = window._previewDays[i];
+      selected.push({
+        id: Date.now() + i,
+        name: window._previewName,
+        phone: window._previewPhone,
+        date: d.toISOString().split('T')[0],
+        time: window._previewTime,
+        done: false,
+        color: colors[colorIdx],
+        groupId: Date.now()
+      });
+    }
   });
-  setStore(A_KEY, agendaData);
+
+  agenda.push(...selected);
+  setStore(A_KEY, agenda);
+
   document.getElementById('ag-success-detail').textContent =
-    `${confirmedDays.length} sesiones programadas para ${name}`;
-  hide('ag-step-preview'); show('ag-step-success');
+    `${window._previewName} — ${selected.length} sesiones programadas.`;
+  document.getElementById('ag-step-preview').style.display = 'none';
+  document.getElementById('ag-step-success').style.display = '';
 }
 
 function resetAgendaForm() {
-  ['ag-name','ag-phone','ag-datetime','ag-sessions'].forEach(id => document.getElementById(id).value = '');
-  hide('ag-step-success'); show('ag-step-form');
+  document.getElementById('ag-step-success').style.display = 'none';
+  document.getElementById('ag-step-form').style.display    = '';
+  document.getElementById('ag-name').value     = '';
+  document.getElementById('ag-phone').value    = '';
+  document.getElementById('ag-datetime').value = '';
+  document.getElementById('ag-sessions').value = '';
 }
 
 function renderAgenda() {
-  const agendaData = getStore(A_KEY, []);
-  const container  = document.getElementById('agenda-content');
-  if (!agendaData.length) {
-    container.innerHTML = '<div class="card"><div class="empty-state">Todavía no agendaste pacientes</div></div>';
-    return;
+  const agenda = getStore(A_KEY, []).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const today = todayStr();
+  const container = document.getElementById('agenda-content');
+  if (!agenda.length) {
+    container.innerHTML = '<div class="empty-state">No hay pacientes agendados</div>'; return;
   }
-  const byDate = {};
-  agendaData.forEach(item => {
-    if (!byDate[item.date]) byDate[item.date] = { label: item.dateLabel, items: [] };
-    byDate[item.date].items.push(item);
+  const groups = {};
+  agenda.forEach(p => {
+    const key = p.date < today ? 'Anteriores' : p.date === today ? 'Hoy' : 'Próximos';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(p);
   });
-  container.innerHTML = Object.keys(byDate).sort().map(date => {
-    const group = byDate[date];
-    group.items.sort((a, b) => a.time.localeCompare(b.time));
-    return `<div class="day-group">
-      <div class="day-group-label">${group.label}</div>
-      ${group.items.map(p => {
-        const color = colorForName(p.name);
-        return `<div class="patient-card" style="--pcolor:${color}">
+  const order = ['Hoy', 'Próximos', 'Anteriores'];
+  container.innerHTML = order.filter(k => groups[k]).map(key => `
+    <div class="day-group">
+      <div class="day-group-label">${key}</div>
+      ${groups[key].map((p, localIdx) => {
+        const globalIdx = agenda.findIndex(x => x.id === p.id);
+        return `<div class="patient-card" style="--pcolor:${p.color || '#0c447c'}">
           <div class="patient-time">${p.time}</div>
           <div class="patient-info">
-            <div class="patient-name"><span class="patient-dot" style="background:${color}"></span>${p.name}</div>
-            <div class="patient-meta">${p.phone} · sesión ${p.session}/${p.total}</div>
+            <div class="patient-name">
+              <div class="patient-dot"></div>
+              ${p.name}
+            </div>
+            <div class="patient-meta">${new Date(p.date + 'T12:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'})} · ${p.phone || 'Sin tel.'}</div>
           </div>
           <div class="card-actions">
-            <button class="icon-btn" onclick="openEdit('${p.patientKey}','${p.date}')">✎</button>
+            <button class="icon-btn" onclick="openModal(${globalIdx})">✏️</button>
           </div>
         </div>`;
       }).join('')}
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MODAL EDITAR / ELIMINAR TURNO
+   MODAL EDITAR / ELIMINAR (agenda localStorage)
 ═══════════════════════════════════════════════════════════ */
-function openEdit(patientKey, date) {
-  const agendaData = getStore(A_KEY, []);
-  const entry = agendaData.find(e => e.patientKey === patientKey && e.date === date);
-  if (!entry) return;
-  editingPatientKey = patientKey;
-  editingDate = date;
-  document.getElementById('modal-patient-title').textContent = entry.name + ' — ' + entry.dateLabel;
-  document.getElementById('edit-name').value  = entry.name;
-  document.getElementById('edit-phone').value = entry.phone;
-  document.getElementById('edit-time').value  = entry.time;
-  showModalDefaultView();
+let _modalIdx = null;
+
+function openModal(idx) {
+  _modalIdx = idx;
+  const agenda = getStore(A_KEY, []);
+  const p = agenda[idx];
+  if (!p) return;
+  document.getElementById('modal-patient-title').textContent = p.name;
+  document.getElementById('edit-name').value  = p.name;
+  document.getElementById('edit-phone').value = p.phone || '';
+  document.getElementById('edit-time').value  = p.time;
+  document.getElementById('modal-edit-fields').style.display    = '';
+  document.getElementById('modal-confirm-fields').style.display = 'none';
+  document.getElementById('modal-actions-default').style.display = '';
+  document.getElementById('modal-actions-confirm').style.display = 'none';
   document.getElementById('edit-modal').classList.add('active');
 }
 
-function showModalDefaultView() {
-  show('modal-edit-fields');
+function closeModal() { document.getElementById('edit-modal').classList.remove('active'); _modalIdx = null; }
+
+function saveEdit() {
+  if (_modalIdx === null) return;
+  const agenda = getStore(A_KEY, []);
+  agenda[_modalIdx].name  = document.getElementById('edit-name').value.trim() || agenda[_modalIdx].name;
+  agenda[_modalIdx].phone = document.getElementById('edit-phone').value.trim();
+  agenda[_modalIdx].time  = document.getElementById('edit-time').value;
+  setStore(A_KEY, agenda);
+  closeModal(); renderAgenda();
+}
+
+function askDeleteOne() {
+  const agenda = getStore(A_KEY, []);
+  const p = agenda[_modalIdx];
+  document.getElementById('modal-confirm-text').textContent = `¿Eliminar la sesión del ${new Date(p.date+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}?`;
+  document.getElementById('modal-edit-fields').style.display    = 'none';
+  document.getElementById('modal-confirm-fields').style.display = '';
+  document.getElementById('modal-actions-default').style.display = 'none';
+  document.getElementById('modal-actions-confirm').style.display = '';
+  document.getElementById('modal-confirm-btn').onclick = deleteOne;
+}
+
+function askDeleteAll() {
+  const agenda = getStore(A_KEY, []);
+  const p = agenda[_modalIdx];
+  document.getElementById('modal-confirm-text').textContent = `¿Eliminar TODAS las sesiones de ${p.name}?`;
+  document.getElementById('modal-edit-fields').style.display    = 'none';
+  document.getElementById('modal-confirm-fields').style.display = '';
+  document.getElementById('modal-actions-default').style.display = 'none';
+  document.getElementById('modal-actions-confirm').style.display = '';
+  document.getElementById('modal-confirm-btn').onclick = deleteAll;
+}
+
+function cancelDeleteConfirm() {
+  document.getElementById('modal-edit-fields').style.display    = '';
   document.getElementById('modal-confirm-fields').style.display = 'none';
   document.getElementById('modal-actions-default').style.display = '';
   document.getElementById('modal-actions-confirm').style.display = 'none';
 }
 
-function closeModal() {
-  document.getElementById('edit-modal').classList.remove('active');
-  editingPatientKey = editingDate = null;
-}
-
-function saveEdit() {
-  const newName  = document.getElementById('edit-name').value.trim();
-  const newPhone = document.getElementById('edit-phone').value.trim().replace(/[^\d+]/g, '');
-  const newTime  = document.getElementById('edit-time').value;
-  if (!newName || !newPhone || !newTime) { alert('Completá todos los campos.'); return; }
-  const newKey = newName.toLowerCase() + '|' + newPhone;
-  let agendaData = getStore(A_KEY, []);
-  agendaData = agendaData.map(e =>
-    (e.patientKey === editingPatientKey && e.date === editingDate)
-      ? { ...e, name: newName, phone: newPhone, time: newTime, patientKey: newKey }
-      : e
-  );
-  setStore(A_KEY, agendaData);
+function deleteOne() {
+  const agenda = getStore(A_KEY, []);
+  agenda.splice(_modalIdx, 1);
+  setStore(A_KEY, agenda);
   closeModal(); renderAgenda();
 }
 
-function askDeleteOne() {
-  hide('modal-edit-fields');
-  show('modal-confirm-fields');
-  document.getElementById('modal-confirm-text').textContent = '¿Eliminar este turno puntual? Esta acción no se puede deshacer.';
-  hide('modal-actions-default');
-  show('modal-actions-confirm');
-  document.getElementById('modal-confirm-btn').onclick = doDeleteOne;
-}
-
-function askDeleteAll() {
-  hide('modal-edit-fields');
-  show('modal-confirm-fields');
-  document.getElementById('modal-confirm-text').textContent = '¿Eliminar TODAS las sesiones de este paciente? Esta acción no se puede deshacer.';
-  hide('modal-actions-default');
-  show('modal-actions-confirm');
-  document.getElementById('modal-confirm-btn').onclick = doDeleteAll;
-}
-
-function cancelDeleteConfirm() { showModalDefaultView(); }
-
-function doDeleteOne() {
-  let agendaData = getStore(A_KEY, []);
-  agendaData = agendaData.filter(e => !(e.patientKey === editingPatientKey && e.date === editingDate));
-  setStore(A_KEY, agendaData);
+function deleteAll() {
+  const agenda = getStore(A_KEY, []);
+  const groupId = agenda[_modalIdx]?.groupId;
+  const filtered = groupId ? agenda.filter(p => p.groupId !== groupId) : agenda.filter((_, i) => i !== _modalIdx);
+  setStore(A_KEY, filtered);
   closeModal(); renderAgenda();
 }
 
-function doDeleteAll() {
-  let agendaData = getStore(A_KEY, []);
-  agendaData = agendaData.filter(e => e.patientKey !== editingPatientKey);
-  setStore(A_KEY, agendaData);
-  closeModal(); renderAgenda();
-}
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('today-date').textContent =
+    new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+});
 </script>
 </body>
 </html>
