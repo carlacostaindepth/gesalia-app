@@ -32,8 +32,8 @@
 }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
 .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 10; }
-.logo { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
-.logo span { font-weight: 400; color: var(--text3); font-size: 13px; margin-left: 6px; }
+.logo { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+.logo span { font-weight: 400; color: var(--text3); font-size: 13px; margin-left: 7px; }
 
 .tab-bar { display: flex; background: var(--bg3); border-bottom: 0.5px solid var(--border); }
 .tab { flex: 1; padding: 11px 8px; font-size: 13px; text-align: center; cursor: pointer; border: none; background: transparent; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.15s; }
@@ -113,6 +113,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .di-meta { font-size: 11px; color: var(--text3); line-height: 1.7; }
 .di-auth-nro { font-size: 13px; font-weight: 600; color: var(--green-text); margin-top: 4px; }
 .di-token { font-size: 11px; color: var(--text3); font-family: monospace; letter-spacing: 0.05em; }
+.prog-wrap { margin-top: 8px; }
+.prog-top { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.prog-top b { color: var(--text); font-weight: 600; }
+.prog { height: 6px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.prog > span { display: block; height: 100%; background: var(--blue-text); border-radius: 4px; transition: width 0.3s; }
+.prog.full > span { background: var(--green-text); }
 
 .os-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; display: inline-block; }
 .tag-sancor { background: var(--blue-bg); color: var(--blue-text); }
@@ -170,22 +176,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- Paso 2A: Paciente con tanda activa (vuelve) -->
   <div id="step-returning" style="display:none;">
-    <div class="alert alert-green">Hola de nuevo. Solo necesitamos tu token de hoy.</div>
+    <div class="alert alert-green" id="ret-alert">Hola de nuevo. Solo necesitamos tu token de hoy.</div>
     <div class="card">
       <div class="day-header">Tu tratamiento</div>
       <div class="info-row"><span class="lbl">Nombre</span><span class="val" id="ret-name">—</span></div>
       <div class="info-row"><span class="lbl">Obra social</span><span class="val" id="ret-os">—</span></div>
       <div class="info-row"><span class="lbl">Sesiones</span><span class="val" id="ret-sessions">—</span></div>
+      <div class="info-row"><span class="lbl">Te quedan</span><span class="val" id="ret-remaining">—</span></div>
       <div class="dots" id="ret-dots"></div>
       <div class="dots-legend">🟢 autorizada · 🔵 la de hoy · 🟡 procesando · 🔴 con problema · ⚪ pendiente</div>
-      <div class="divider"></div>
-      <div class="field">
-        <label>Token de hoy</label>
-        <input type="text" id="ret-token" placeholder="Ingresá el código" autocomplete="off" inputmode="numeric" />
-        <div class="hint" id="ret-token-hint"></div>
+
+      <!-- Estado del token de hoy (si ya lo envió) -->
+      <div id="ret-today" style="display:none; margin-top:14px;"></div>
+
+      <!-- Área para enviar el token (si todavía no lo envió hoy) -->
+      <div id="ret-send-area">
+        <div class="divider"></div>
+        <div class="field">
+          <label>Token de hoy</label>
+          <input type="text" id="ret-token" placeholder="Ingresá el código" autocomplete="off" inputmode="numeric" />
+          <div class="hint" id="ret-token-hint"></div>
+        </div>
+        <button class="btn btn-primary" id="ret-submit-btn" onclick="submitReturning()">Enviar token →</button>
       </div>
-      <button class="btn btn-primary" id="ret-submit-btn" onclick="submitReturning()">Enviar token →</button>
-      <button class="btn btn-ghost" onclick="resetView()">No soy yo, volver</button>
+
+      <button class="btn btn-ghost" onclick="resetView()">Volver al inicio</button>
     </div>
   </div>
 
@@ -198,11 +213,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <label>Nombre completo</label>
         <input type="text" id="new-name" placeholder="Pérez Juan" autocomplete="name" />
         <div class="hint">Igual que figura en Octus (apellido y nombre).</div>
-      </div>
-      <div class="field">
-        <label>Teléfono (opcional)</label>
-        <input type="tel" id="new-phone" placeholder="351 1234567" inputmode="tel" autocomplete="tel" />
-        <div class="hint">Por si tu kinesiólogo necesita avisarte algo.</div>
       </div>
       <div class="field">
         <label>Obra social</label>
@@ -351,9 +361,12 @@ const KINE_ID      = '00000000-0000-0000-0000-000000000001'; // Mario (piloto)
 const ACCESS_PASS  = 'kine5393';
 
 // Obras sociales. auto:true → se autoriza por Octus. auto:false → gestión manual (portal propio).
+// auto:true → se autoriza por Octus. auto:false → gestión manual (portal propio).
 const OBRAS = [
-  { name: 'Sancor',           auto: true  },
+  { name: 'Sancor Salud',     auto: true  },
   { name: 'Prevención Salud', auto: true  },
+  { name: 'Avalian',          auto: true  },
+  { name: 'Apross',           auto: true  },
   { name: 'Mutual Médica',    auto: false }
 ];
 const esAuto = (os) => (OBRAS.find(o => o.name === os) || {}).auto === true;
@@ -500,34 +513,35 @@ async function checkDni() {
   btn.disabled = true; btn.textContent = 'Buscando…';
 
   try {
-    // ¿Ya envió un token hoy? → mostrar su estado
-    const hoy = await db.query('tokens',
-      `?kinesiologo_id=eq.${KINE_ID}&paciente_dni=eq.${dni}&fecha=eq.${todayStr()}&select=*&order=created_at.desc&limit=1`);
-    if (hoy.length) {
-      hide('step-dni');
-      if (hoy[0].auth_status === 'pending') { show('step-waiting'); pollResult(hoy[0].id); }
-      else { mostrarResultado(hoy[0].auth_status, hoy[0].nro_autorizacion); show('step-done'); }
-      return;
-    }
-
     // ¿Paciente conocido?
     const pacientes = await db.query('pacientes',
       `?kinesiologo_id=eq.${KINE_ID}&dni=eq.${dni}&select=*&limit=1`);
 
     if (!pacientes.length) { prepararNuevo(); return; }
-
     currentPatient = pacientes[0];
 
-    // Buscar la tanda más reciente
+    // Tandas y token de hoy
     const tandas = await db.query('tandas',
       `?kinesiologo_id=eq.${KINE_ID}&paciente_dni=eq.${dni}&select=*&order=created_at.desc`);
+    const hoy = await db.query('tokens',
+      `?kinesiologo_id=eq.${KINE_ID}&paciente_dni=eq.${dni}&fecha=eq.${todayStr()}&select=*&order=created_at.desc&limit=1`);
 
     const activa = tandas.find(t => t.estado === 'activa');
     const completadas = tandas.filter(t => t.estado === 'completada').length;
+    const tokenHoy = hoy[0] || null;
+
+    // Si ya envió hoy y sigue procesándose, mostramos la espera
+    if (tokenHoy && tokenHoy.auth_status === 'pending') {
+      hide('step-dni'); show('step-waiting'); pollResult(tokenHoy.id); return;
+    }
 
     if (activa) {
       currentTanda = activa;
-      await mostrarReturning(activa);
+      await mostrarReturning(activa, tokenHoy);
+    } else if (tokenHoy && tandas.length) {
+      // Tanda recién completada hoy → mostrar su progreso + estado de hoy
+      currentTanda = tandas[0];
+      await mostrarReturning(tandas[0], tokenHoy);
     } else {
       prepararNuevaTanda(currentPatient, completadas);
     }
@@ -543,7 +557,6 @@ async function checkDni() {
 function prepararNuevo() {
   hide('step-dni'); hide('step-returning'); hide('step-newtanda');
   document.getElementById('new-name').value = '';
-  document.getElementById('new-phone').value = '';
   document.getElementById('new-os').value = '';
   document.getElementById('new-afiliado').value = '';
   document.getElementById('new-sessions').value = '';
@@ -553,17 +566,57 @@ function prepararNuevo() {
   show('step-new');
 }
 
-/* ── Estado B: tanda activa → solo token ── */
-async function mostrarReturning(tanda) {
+/* ── Estado B: tanda activa → progreso + (token si no lo envió hoy) ── */
+async function mostrarReturning(tanda, tokenHoy) {
   const tokens = await db.query('tokens',
     `?tanda_id=eq.${tanda.id}&select=numero_sesion,auth_status&order=numero_sesion.asc`);
   document.getElementById('ret-name').textContent = currentPatient.nombre;
   document.getElementById('ret-os').textContent = currentPatient.obra_social;
   const usadas = 1 + tokens.length; // la 1 es manual del kine
+  const restantes = Math.max(0, tanda.total_sesiones - usadas);
   document.getElementById('ret-sessions').textContent = `${usadas} de ${tanda.total_sesiones}`;
+  document.getElementById('ret-remaining').textContent =
+    restantes === 0 ? '✓ tratamiento completo' : `${restantes} ${restantes === 1 ? 'sesión' : 'sesiones'}`;
   renderDots(tanda.total_sesiones, tokens);
-  setTokenHint(currentPatient.obra_social, 'ret');
-  document.getElementById('ret-token').value = '';
+
+  const alert = document.getElementById('ret-alert');
+  const todayBox = document.getElementById('ret-today');
+  const sendArea = document.getElementById('ret-send-area');
+
+  if (tokenHoy) {
+    // Ya envió el token de hoy → ocultar el formulario y mostrar el estado
+    sendArea.style.display = 'none';
+    todayBox.style.display = '';
+    alert.className = 'alert alert-green';
+    alert.textContent = 'Hola de nuevo 👋';
+    const s = tokenHoy.auth_status;
+    if (s === 'ok') {
+      todayBox.innerHTML = `<div class="alert alert-green" style="margin:0">✅ Tu sesión de hoy está <b>autorizada</b>.`
+        + (tokenHoy.nro_autorizacion ? ` Nº ${tokenHoy.nro_autorizacion}` : '') + `</div>`;
+    } else if (s === 'manual') {
+      todayBox.innerHTML = `<div class="alert alert-warn" style="margin:0">📋 Token de hoy recibido. Tu kinesiólogo lo gestiona por el portal de tu obra social.</div>`;
+    } else if (s === 'error') {
+      todayBox.innerHTML = `<div class="alert alert-err" style="margin:0">⚠️ Hubo un problema con el token de hoy. Tu kinesiólogo ya fue avisado y lo resuelve.</div>`;
+    } else {
+      todayBox.innerHTML = `<div class="alert alert-warn" style="margin:0">📨 Token de hoy recibido, en proceso.</div>`;
+    }
+  } else if (restantes === 0) {
+    // Tratamiento completo, sin token hoy
+    sendArea.style.display = 'none';
+    todayBox.style.display = '';
+    todayBox.innerHTML = `<div class="alert alert-green" style="margin:0">✓ Completaste todas las sesiones de este tratamiento.</div>`;
+    alert.className = 'alert alert-green';
+    alert.textContent = 'Hola de nuevo 👋';
+  } else {
+    // Todavía no envió hoy → mostrar el formulario
+    sendArea.style.display = '';
+    todayBox.style.display = 'none';
+    alert.className = 'alert alert-green';
+    alert.textContent = 'Hola de nuevo. Solo necesitamos tu token de hoy.';
+    setTokenHint(currentPatient.obra_social, 'ret');
+    document.getElementById('ret-token').value = '';
+  }
+
   hide('step-dni'); show('step-returning');
 }
 
@@ -667,7 +720,6 @@ async function submitReturning() {
 /* ── Submit A (nuevo) ── */
 async function submitNew() {
   const nombre = document.getElementById('new-name').value.trim();
-  const phone  = document.getElementById('new-phone').value.trim().replace(/[^\d+]/g, '');
   const os     = document.getElementById('new-os').value;
   const total  = parseInt(document.getElementById('new-sessions').value);
   const token  = document.getElementById('new-token').value.trim();
@@ -680,7 +732,7 @@ async function submitNew() {
   try {
     await db.upsert('pacientes', {
       kinesiologo_id: KINE_ID, nombre, dni: currentDni, obra_social: os,
-      telefono: phone, afiliado
+      afiliado
     }, 'kinesiologo_id,dni');
 
     const tk = await crearTandaYToken({ nombre, dni: currentDni, os, afiliado, total, token });
@@ -817,6 +869,21 @@ function osClassFor(os) {
   return os.includes('Sancor') ? 'tag-sancor' : os.includes('Prevención') ? 'tag-prev' : 'tag-mutual';
 }
 
+// Barra de progreso del tratamiento (sesiones hechas / total que puso el paciente)
+function progresoHtml(t) {
+  const total = t.tandas && t.tandas.total_sesiones;
+  const usadas = t.numero_sesion;
+  if (!total || !usadas) return '';
+  const done = Math.min(usadas, total);
+  const pct = Math.round(done / total * 100);
+  const full = done >= total;
+  const restan = Math.max(0, total - done);
+  return `<div class="prog-wrap">
+    <div class="prog-top"><span>Tratamiento</span><span><b>${done}</b>/${total}${full ? ' ✓ completo' : ` · faltan ${restan}`}</span></div>
+    <div class="prog${full ? ' full' : ''}"><span style="width:${pct}%"></span></div>
+  </div>`;
+}
+
 async function renderHoy() {
   const today = todayStr();
   document.getElementById('today-date').textContent =
@@ -827,7 +894,7 @@ async function renderHoy() {
 
   try {
     const tokens = await db.query('tokens',
-      `?kinesiologo_id=eq.${KINE_ID}&fecha=eq.${today}&select=*&order=created_at.asc`);
+      `?kinesiologo_id=eq.${KINE_ID}&fecha=eq.${today}&select=*,tandas(total_sesiones)&order=created_at.asc`);
     statusEl.textContent = `Sincronizado · ${nowTime()}`; statusEl.className = 'sync-indicator sync-ok';
     if (!tokens.length) { listEl.innerHTML = '<div class="empty-state">Aún no hay registros hoy</div>'; return; }
 
@@ -837,6 +904,7 @@ async function renderHoy() {
       return `<div class="daily-item">
         <div class="di-header"><span class="di-name">${esc(t.paciente_nombre)}</span>${badge}</div>
         <div class="di-meta"><span class="os-tag ${osClassFor(t.obra_social)}">${esc(t.obra_social)}</span> · ${hora}${t.numero_sesion ? ' · sesión ' + t.numero_sesion : ''}</div>
+        ${progresoHtml(t)}
         ${extra}
       </div>`;
     }).join('');
